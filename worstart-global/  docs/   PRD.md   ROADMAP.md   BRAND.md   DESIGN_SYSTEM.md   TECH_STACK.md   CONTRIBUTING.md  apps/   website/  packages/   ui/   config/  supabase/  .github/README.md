@@ -1,0 +1,15 @@
+docs/
+
+README.md
+
+PRD.md
+
+ROADMAP.md
+
+BRAND.md
+
+DESIGN_SYSTEM.md
+
+TECH_STACK.md
+
+CHANGELOG.md
