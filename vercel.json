@@ -1,0 +1,6 @@
+{
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm --filter @workspace/website run build",
+  "outputDirectory": "artifacts/website/dist/public",
+  "framework": "vite"
+}
