@@ -31,9 +31,12 @@ import {
 // --- FRAMER MOTION IMPORTS ---
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 
+// --- FORMSPREE REACT IMPORTS ---
+import { useForm, ValidationError } from '@formspree/react';
+
 const queryClient = new QueryClient();
 
-// --- ANIMATION HELPERS (Injected directly here) ---
+// --- ANIMATION HELPERS ---
 
 /** Standard fade-up entrance */
 const fadeUp: Variants = {
@@ -80,7 +83,7 @@ function useSafeVariants(variants: Variants): Variants {
   return variants;
 }
 
-// --- DATA CONSTANTS (Unchanged) ---
+// --- DATA CONSTANTS ---
 
 const markets = [
   { name: 'Algeria', code: 'DZ', note: 'North Africa', route: 'Origin context and regional handoffs.' },
@@ -284,82 +287,103 @@ function NetworkGraphic() {
 }
 
 function ContactModal({ onClose }: { onClose: () => void }) {
-  const [submitted, setSubmitted] = useState(false);
+  // Initialize Formspree hook with your unique ID
+  const [state, handleSubmit] = useForm("mljdoanv");
 
+  // If submission is successful, show a success screen inside the modal
+  if (state.succeeded) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[hsl(var(--primary)/.78)] p-4 backdrop-blur-sm">
+        <div className="modal-in relative w-full max-w-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-9 shadow-2xl text-center">
+          <button type="button" onClick={onClose} className="icon-button absolute right-4 top-4" aria-label="Close confirmation">
+            <X className="h-5 w-5" />
+          </button>
+          
+          <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-[hsl(var(--accent)/.14)] text-[hsl(var(--accent))]">
+            <Check className="h-6 w-6" />
+          </div>
+          
+          <h2 className="font-display text-3xl font-bold text-[hsl(var(--foreground))]">Enquiry Received.</h2>
+          <p className="mt-4 max-w-md mx-auto text-sm leading-6 text-[hsl(var(--muted-foreground))]">
+            Thank you for contacting WORSTART SHIPPING. We have received your route details and will review them shortly.
+          </p>
+          
+          <button type="button" onClick={onClose} className="button-primary mt-8 w-full">
+            Close Window
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Normal Form View
   return (
-    <div
+    <div 
       className="fixed inset-0 z-50 flex items-center justify-center bg-[hsl(var(--primary)/.78)] p-4 backdrop-blur-sm"
       role="presentation"
       onMouseDown={(event) => event.target === event.currentTarget && onClose()}
     >
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
-        className="modal-in relative w-full max-w-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-6 shadow-2xl sm:p-9" 
-        role="dialog" 
-        aria-modal="true" 
-        aria-labelledby="contact-modal-title" 
-        data-testid="contact-modal"
-      >
-        <button type="button" onClick={onClose} className="icon-button absolute right-4 top-4" aria-label="Close logistics enquiry" data-testid="button-close-contact">
+      <div className="modal-in relative w-full max-w-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-6 shadow-2xl sm:p-9" role="dialog" aria-modal="true" aria-labelledby="contact-modal-title">
+        
+        <button type="button" onClick={onClose} className="icon-button absolute right-4 top-4" aria-label="Close logistics enquiry">
           <X className="h-5 w-5" />
         </button>
-        {!submitted ? (
-          <>
-            <p className="eyebrow">Start a logistics enquiry</p>
-            <h2 id="contact-modal-title" className="mt-4 max-w-sm font-display text-3xl font-bold leading-[1.06] text-[hsl(var(--foreground))]">Start a logistics enquiry.</h2>
-            <p className="mt-4 max-w-md text-sm leading-6 text-[hsl(var(--muted-foreground))]">
-              Share the route, cargo context and service need so the next logistics conversation starts with the right information.
-            </p>
-            <form className="mt-7 space-y-4" onSubmit={(event) => { event.preventDefault(); setSubmitted(true); }}>
-              <label className="block">
-                <span className="field-label">Your name</span>
-                <input required type="text" className="field-input" placeholder="Name" data-testid="input-contact-name" />
-              </label>
-              <label className="block">
-                <span className="field-label">Business email</span>
-                <input required type="email" className="field-input" placeholder="you@company.com" data-testid="input-contact-email" />
-              </label>
-              <label className="block">
-                <span className="field-label">Origin</span>
-                <input required type="text" className="field-input" placeholder="Where does it begin?" data-testid="input-contact-origin" />
-              </label>
-              <label className="block">
-                <span className="field-label">Destination</span>
-                <input required type="text" className="field-input" placeholder="Where does it need to go?" data-testid="input-contact-destination" />
-              </label>
-              <label className="block">
-                <span className="field-label">Cargo or service need</span>
-                <textarea required rows={3} className="field-input resize-none" placeholder="Cargo, fulfillment, documentation or visibility..." data-testid="input-contact-cargo" />
-              </label>
-              <label className="block">
-                <span className="field-label">Optional notes</span>
-                <textarea rows={2} className="field-input resize-none" placeholder="Timing, handling context or other route notes..." data-testid="input-contact-notes" />
-              </label>
-              <button type="submit" className="button-primary mt-3 flex w-full justify-between" data-testid="button-submit-contact">
-                Prepare enquiry
-                <ArrowUpRight className="h-4 w-4" />
-              </button>
-              <p className="font-mono-ui text-[0.58rem] uppercase tracking-[.1em] text-[hsl(var(--muted-foreground))]">Presentation flow only — nothing is sent yet.</p>
-            </form>
-          </>
-        ) : (
-          <div className="py-10 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[hsl(var(--accent)/.14)] text-[hsl(var(--accent))]">
-              <Check className="h-6 w-6" />
-            </div>
-            <h2 id="contact-modal-title" className="mt-6 font-display text-3xl font-bold text-[hsl(var(--foreground))]">Request prepared.</h2>
-            <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[hsl(var(--muted-foreground))]">
-              This is a presentation flow for now. Your details have not been sent; a live logistics enquiry service will be connected here later.
-            </p>
-            <button type="button" onClick={onClose} className="button-secondary mt-7" data-testid="button-close-confirmation">
-              Return to the page
-            </button>
+
+        <p className="eyebrow">Start a logistics enquiry</p>
+        <h2 id="contact-modal-title" className="mt-4 max-w-sm font-display text-3xl font-bold leading-[1.06] text-[hsl(var(--foreground))]">Tell us about your move.</h2>
+        <p className="mt-4 max-w-md text-sm leading-6 text-[hsl(var(--muted-foreground))]">
+          Share the origin, destination, and cargo context so we can prepare the right route strategy for you.
+        </p>
+
+        {/* FORM STARTS HERE */}
+        <form onSubmit={handleSubmit} className="mt-7 space-y-4">
+          
+          <label className="block">
+            <span className="field-label">Your Name</span>
+            <input required type="text" name="name" className="field-input" placeholder="Full Name" />
+            <ValidationError prefix="Name" field="name" errors={state.errors} />
+          </label>
+          
+          <label className="block">
+            <span className="field-label">Business Email</span>
+            <input required type="email" name="email" className="field-input" placeholder="you@company.com" />
+            <ValidationError prefix="Email" field="email" errors={state.errors} />
+          </label>
+          
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="field-label">Origin Country</span>
+              <input required type="text" name="origin" className="field-input" placeholder="e.g. Algeria" />
+              <ValidationError prefix="Origin" field="origin" errors={state.errors} />
+            </label>
+            
+            <label className="block">
+              <span className="field-label">Destination Country</span>
+              <input required type="text" name="destination" className="field-input" placeholder="e.g. Germany" />
+              <ValidationError prefix="Destination" field="destination" errors={state.errors} />
+            </label>
           </div>
-        )}
-      </motion.div>
+
+          <label className="block">
+            <span className="field-label">Cargo & Service Details</span>
+            <textarea required rows={3} name="message" className="field-input resize-none" placeholder="What are you moving? Freight, fulfillment, customs docs?" />
+            <ValidationError prefix="Message" field="message" errors={state.errors} />
+          </label>
+
+          <button 
+            type="submit" 
+            disabled={state.submitting} 
+            className="button-primary mt-3 flex w-full justify-between"
+          >
+            {state.submitting ? 'Sending...' : 'Prepare Enquiry'}
+            {!state.submitting && <ArrowUpRight className="h-4 w-4" />}
+          </button>
+          
+          <p className="font-mono-ui text-[0.58rem] uppercase tracking-[.1em] text-[hsl(var(--muted-foreground))]">
+            Secure submission via Formspree. No spam.
+          </p>
+        </form>
+      </div>
     </div>
   );
 }
@@ -372,7 +396,7 @@ function Home() {
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const firstMenuItemRef = useRef<HTMLAnchorElement>(null);
 
-  // SEO Meta Tags (Unchanged)
+  // SEO Meta Tags
   useEffect(() => {
     document.title = 'WORSTART SHIPPING';
     const description = 'WORSTART SHIPPING helps businesses think clearly about freight, fulfillment, documentation and shipment movement across international routes.';
@@ -408,7 +432,7 @@ function Home() {
     setNameMeta('twitter:description', description);
   }, []);
 
-  // Header Scroll Effect (Unchanged)
+  // Header Scroll Effect
   useEffect(() => {
     const onScroll = () => setHeaderScrolled(window.scrollY > 28);
     onScroll();
@@ -416,9 +440,7 @@ function Home() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // REMOVED: Old IntersectionObserver logic (.reveal-on-scroll) replaced by Framer Motion below.
-
-  // Mobile Menu Logic (Unchanged)
+  // Mobile Menu Logic
   useEffect(() => {
     if (!menuOpen && !contactOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -931,4 +953,144 @@ function Home() {
                 whileInView={{ opacity: 1, y: 0 }} 
                 viewport={{ once: true }}
                 transition={{ duration: 0.8, delay: 0.2 }}
-                className="shipment-panel rounded-[1.75rem] bg-[hsl(var(--background))] p-5 shadow-[0_20px_70px_rgba(30,48
+                className="shipment-panel rounded-[1.75rem] bg-[hsl(var(--background))] p-5 shadow-[0_20px_70px_rgba(30,48,68,.1)] md:p-8"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[hsl(var(--border))] pb-5">
+                  <div><span className="field-label">Illustrative workflow</span><h3 className="mt-2 font-display text-2xl font-bold text-[hsl(var(--foreground))]">Route context / sample</h3></div>
+                  <span className="workflow-badge"><span />Not live</span>
+                </div>
+                <div className="shipment-route-bar mt-6">
+                  <div><span className="field-label">Origin</span><strong>Algeria</strong></div>
+                  <div className="shipment-route-line"><span /><span /><span /></div>
+                  <div className="text-right"><span className="field-label">Destination</span><strong>European Union</strong></div>
+                </div>
+                <div className="shipment-detail-grid mt-8">
+                  <div><span className="field-label">Cargo / service need</span><strong>Example cargo context</strong></div>
+                  <div><span className="field-label">Current stage</span><strong>Route brief</strong></div>
+                  <div><span className="field-label">Documents</span><strong><Check className="mr-2 inline h-4 w-4 text-[hsl(var(--accent))]" />Information to review</strong></div>
+                  <div><span className="field-label">Next handoff</span><strong>Confirmation required</strong></div>
+                </div>
+                <div className="mt-8 border-t border-[hsl(var(--border))] pt-5 text-xs leading-5 text-[hsl(var(--muted-foreground))]">Sample content only. A real movement would be shaped around confirmed cargo, documents, route and partner details.</div>
+              </motion.div>
+            </div>
+          </div>
+        </section>
+
+        {/* FUTURE DIRECTION */}
+        <section className="bg-[hsl(var(--background))] py-20 md:py-28 lg:py-32">
+          <div className="container-wide">
+            <div className="grid items-end gap-10 md:grid-cols-[1fr_auto]">
+              <div>
+                <p className="eyebrow">Future direction</p>
+                <h2 className="mt-5 max-w-4xl font-display text-5xl font-bold leading-[.95] tracking-[-.06em] text-[hsl(var(--foreground))] md:text-7xl">Make every handoff feel<br /><span className="text-[hsl(var(--accent))]">clearer to business.</span></h2>
+              </div>
+              <p className="max-w-xs border-l border-[hsl(var(--border))] pl-5 text-sm leading-6 text-[hsl(var(--muted-foreground))]">Our direction is simple: make freight movement easier to understand across the markets and ecosystem services that matter.</p>
+            </div>
+            <div className="mt-16 flex flex-col justify-between gap-8 border-t border-[hsl(var(--border))] pt-6 text-[hsl(var(--muted-foreground))] sm:flex-row">
+              <p className="font-mono-ui text-[0.62rem] uppercase tracking-[.15em]">Direction / future expansion</p>
+              <p className="max-w-md text-sm leading-6">From Algeria to China, from the European Union to the United States—WORSTART SHIPPING is building toward a wider movement network, with maritime transport explicitly held as a future horizon.</p>
+            </div>
+          </div>
+        </section>
+
+        {/* CONTACT CTA */}
+        <section id="contact" className="bg-[hsl(var(--background))] px-0 py-20 md:py-28">
+          <div className="container-wide">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.98 }} 
+              whileInView={{ opacity: 1, scale: 1 }} 
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+              className="contact-panel relative overflow-hidden rounded-[2rem] bg-[hsl(var(--primary))] p-7 text-[hsl(var(--primary-foreground))] md:p-12 lg:p-16"
+            >
+              <div className="cta-orbit cta-orbit-large absolute -right-10 top-1/2 h-64 w-64 -translate-y-1/2 rounded-full md:right-[8%]" />
+              <div className="cta-orbit cta-orbit-small absolute -right-2 top-1/2 h-40 w-40 -translate-y-1/2 rounded-full md:right-[12%]" />
+              <div className="relative z-10 grid gap-12 lg:grid-cols-[1fr_.8fr] lg:items-center lg:gap-20">
+                <div>
+                  <p className="eyebrow">Start a logistics enquiry</p>
+                  <h2 className="mt-5 max-w-3xl font-display text-5xl font-bold leading-[.93] tracking-[-.06em] md:text-7xl">Move goods<br /><span className="text-[hsl(var(--accent))]">with clarity.</span></h2>
+                  <p className="mt-7 max-w-md text-sm leading-6 text-[hsl(var(--primary-foreground)/.66)]">Share your route, cargo context and service need. This presentation flow shows how the conversation starts; details are not sent yet.</p>
+                  <button type="button" onClick={() => setContactOpen(true)} className="button-cta-outline mt-7" data-testid="button-open-contact">
+                    Start a logistics enquiry <ArrowUpRight className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="contact-route-visual" aria-hidden="true">
+                  <div className="contact-route-grid" />
+                  <div className="contact-route-line contact-route-line-one" />
+                  <div className="contact-route-line contact-route-line-two" />
+                  <span className="contact-route-node contact-route-node-one">DZ</span>
+                  <span className="contact-route-node contact-route-node-two">EU</span>
+                  <span className="contact-route-node contact-route-node-three">CN</span>
+                  <div className="contact-route-core"><span>W</span><small>next move</small></div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="bg-[hsl(var(--primary))] py-12 text-[hsl(var(--primary-foreground))]">
+        <div className="container-wide">
+          <div className="flex flex-col justify-between gap-10 border-b border-[hsl(var(--primary-foreground)/.18)] pb-10 md:flex-row md:items-start">
+            <div>
+              <a href="#top" aria-label="Back to WORSTART SHIPPING home" data-testid="link-footer-home"><BrandMark light /></a>
+              <p className="mt-5 max-w-xs text-sm leading-6 text-[hsl(var(--primary-foreground)/.55)]">Route clarity, freight coordination and visibility between confirmed handoffs.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-x-14 gap-y-4 sm:grid-cols-4">
+              <a href="#top" className="footer-link" data-testid="link-footer-overview">Overview</a>
+              <a href="#capabilities" className="footer-link" data-testid="link-footer-capabilities">Services</a>
+              <a href="#markets" className="footer-link" data-testid="link-footer-markets">Network</a>
+              <a href="#ecosystem" className="footer-link" data-testid="link-footer-ecosystem">Ecosystem</a>
+              <a href="#approach" className="footer-link" data-testid="link-footer-approach">How it works</a>
+              <a href="#contact" className="footer-link" data-testid="link-footer-contact">Enquiry</a>
+              <a href="#legal-notice" className="footer-link" data-testid="link-footer-privacy">Privacy</a>
+              <a href="#legal-notice" className="footer-link" data-testid="link-footer-terms">Terms</a>
+            </div>
+          </div>
+          <div className="footer-ecosystem flex flex-col gap-3 border-b border-[hsl(var(--primary-foreground)/.18)] py-6 font-mono-ui text-[0.58rem] uppercase tracking-[.12em] text-[hsl(var(--primary-foreground)/.42)] sm:flex-row sm:items-center sm:gap-5">
+            <span className="text-[hsl(var(--accent))]">Ecosystem labels</span>
+            <span>Bank Online</span><i>·</i><span>DZ Seller</span><i>·</i><span>Car Leasing &amp; Booking</span><i>·</i><span>Future Maritime</span>
+          </div>
+          <p id="legal-notice" className="pt-6 text-xs leading-5 text-[hsl(var(--primary-foreground)/.38)]">Privacy and terms details are to be confirmed before launch.</p>
+          <div className="flex flex-col justify-between gap-3 pt-6 font-mono-ui text-[0.57rem] uppercase tracking-[.12em] text-[hsl(var(--primary-foreground)/.38)] sm:flex-row">
+            <span>WORSTART SHIPPING</span>
+            <span>Operational details to be confirmed</span>
+            <span>Move goods with clarity</span>
+          </div>
+        </div>
+      </footer>
+      {contactOpen && <ContactModal onClose={() => setContactOpen(false)} />}
+    </div>
+  );
+}
+
+function Router() {
+  return (
+    <RoutedErrorBoundary>
+      <Switch>
+        <WouterRoute path="/" component={Home} />
+        <WouterRoute component={NotFound} />
+      </Switch>
+    </RoutedErrorBoundary>
+  );
+}
+
+function RoutedErrorBoundary({ children }: { children: ReactNode }) {
+  const [location] = useLocation();
+  return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>;
+}
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+          <Router />
+        </WouterRouter>
+        <Toaster />
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
+
+export default App;
