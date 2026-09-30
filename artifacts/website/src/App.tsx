@@ -10,11 +10,13 @@ import {
   FileCheck2,
   Globe2,
   Handshake,
+  Linkedin,
   MapPinned,
   Menu,
   Route,
   ShieldCheck,
   Truck,
+  Twitter,
   X,
 } from 'lucide-react';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -86,12 +88,12 @@ function useSafeVariants(variants: Variants): Variants {
 // --- DATA CONSTANTS ---
 
 const markets = [
-  { name: 'Algeria', code: 'DZ', note: 'North Africa', route: 'Origin context and regional handoffs.' },
-  { name: 'China', code: 'CN', note: 'East Asia', route: 'Supplier-side movement and documentation.' },
-  { name: 'European Union', code: 'EU', note: 'Europe', route: 'Cross-border receiving and onward routes.' },
-  { name: 'Türkiye', code: 'TR', note: 'Eurasia', route: 'A connected point between regions.' },
-  { name: 'United Arab Emirates', code: 'AE', note: 'Gulf region', route: 'Gulf-side movement and coordination.' },
-  { name: 'United States', code: 'US', note: 'North America', route: 'A wider destination context.' },
+  { name: 'Algeria', code: 'DZ', note: 'North Africa', route: 'Regional origin, receiving and onward coordination.', point: { x: 18, y: 52 } },
+  { name: 'China', code: 'CN', note: 'East Asia', route: 'Supplier-side movement and documentation handoffs.', point: { x: 82, y: 28 } },
+  { name: 'European Union', code: 'EU', note: 'Europe', route: 'Cross-border receiving and onward route planning.', point: { x: 35, y: 22 } },
+  { name: 'Türkiye', code: 'TR', note: 'Eurasia', route: 'A connected point between European and regional routes.', point: { x: 59, y: 22 } },
+  { name: 'UAE', code: 'AE', note: 'Gulf region', route: 'Gulf-side movement and partner coordination.', point: { x: 70, y: 64 } },
+  { name: 'USA', code: 'US', note: 'North America', route: 'A wider destination and partner context.', point: { x: 20, y: 82 } },
 ];
 
 const capabilities = [
@@ -101,6 +103,7 @@ const capabilities = [
     title: 'Freight & logistics',
     body: 'Planning clear movement across borders, routes and handoffs for the goods that keep business moving.',
     bullets: ['Route and carrier context', 'Origin-to-destination coordination', 'Confirmed handoff planning'],
+    operational: 'Route options, mode and partner availability are reviewed against the cargo brief. Carrier and timing details are confirmed for each enquiry.',
   },
   {
     number: '02',
@@ -108,6 +111,7 @@ const capabilities = [
     title: 'Fulfillment & warehousing',
     body: 'Creating practical space between arrival and onward movement, from receiving to dispatch.',
     bullets: ['Receiving and dispatch readiness', 'Inventory handoff context', 'Onward movement planning'],
+    operational: 'Storage, consolidation, preparation and distribution requirements are scoped around product, volume and destination needs.',
   },
   {
     number: '03',
@@ -115,6 +119,7 @@ const capabilities = [
     title: 'Customs & documentation',
     body: 'Keeping the information around a shipment organized, ready for the conversations that move it forward.',
     bullets: ['Document readiness review', 'Customs conversation context', 'Information handoff coordination'],
+    operational: 'Documentation requirements vary by goods and lane. We coordinate information readiness; customs decisions remain with the relevant authorities and licensed parties.',
   },
   {
     number: '04',
@@ -122,38 +127,61 @@ const capabilities = [
     title: 'Shipment visibility',
     body: 'Making the route easier to understand with clearer updates, ownership and next steps.',
     bullets: ['Milestone-based updates', 'Next-step ownership', 'Visibility between handoffs'],
+    operational: 'Updates are organized around confirmed milestones and responsible handoffs. This website does not provide live shipment tracking.',
   },
 ];
 
 const ecosystemLayers = [
   {
     number: '01',
-    icon: ShieldCheck,
-    name: 'Bank Online',
-    label: 'Financial ecosystem',
-    body: 'A future connection point for the payment, trust and business workflows around movement.',
+    icon: Boxes,
+    name: 'Shippers',
+    label: 'Cargo owners',
+    body: 'Businesses define the goods, route context and service requirements for each movement.',
   },
   {
     number: '02',
-    icon: Boxes,
-    name: 'DZ Seller',
-    label: 'Marketplace ecosystem',
-    body: 'A route from seller and product to buyer, with logistics considered as part of the commerce experience.',
+    icon: Handshake,
+    name: 'Freight partners',
+    label: 'Route coordination',
+    body: 'Carriers and logistics partners connect the confirmed route and operational handoffs.',
   },
   {
     number: '03',
-    icon: Route,
-    name: 'Car leasing & booking',
-    label: 'Mobility ecosystem',
-    body: 'A complementary layer for vehicle movement, booking workflows and related documentation.',
+    icon: Boxes,
+    name: 'Warehouses',
+    label: 'Storage & handling',
+    body: 'Receiving, storage, consolidation and dispatch support between route stages.',
   },
   {
     number: '04',
-    icon: Globe2,
-    name: 'Maritime transport',
-    label: 'Future expansion',
-    body: 'A future direction for extending the network into broader freight and ocean movement.',
+    icon: FileCheck2,
+    name: 'Customs & documentation',
+    label: 'Information readiness',
+    body: 'Documents and shipment information are coordinated for the relevant border processes.',
   },
+  {
+    number: '05',
+    icon: Truck,
+    name: 'Transport',
+    label: 'Physical movement',
+    body: 'Sea, air and road legs are considered as part of a route shaped to the cargo and lane.',
+  },
+  {
+    number: '06',
+    icon: MapPinned,
+    name: 'Final delivery',
+    label: 'Destination handoff',
+    body: 'The final receiving point and onward delivery responsibilities are clarified before handoff.',
+  },
+];
+
+const shipmentMilestones = [
+  'Booking confirmed',
+  'Documentation complete',
+  'In transit',
+  'Destination handling',
+  'Delivered',
 ];
 
 const processSteps = [
@@ -198,6 +226,8 @@ const coordinationItems = [
   'Partner and carrier confirmation',
 ];
 
+const capabilityGroups = [capabilities.slice(0, 2), capabilities.slice(2)];
+
 // --- COMPONENTS ---
 
 function BrandMark({ light = false }: { light?: boolean }) {
@@ -226,6 +256,7 @@ function NetworkGraphic() {
 
   // Safe variants for nodes
   const nodeVariants = useSafeVariants(staggerItem);
+  const safeStaggerContainer = useSafeVariants(staggerContainer);
 
   return (
     <div
@@ -253,7 +284,7 @@ function NetworkGraphic() {
         initial="hidden" 
         whileInView="visible" 
         viewport={{ once: true, margin: "-100px" }}
-        variants={staggerContainer}
+        variants={safeStaggerContainer}
         className="contents" /* Keeps layout intact */
       >
         {markets.map((market, index) => (
@@ -287,14 +318,46 @@ function NetworkGraphic() {
 }
 
 function ContactModal({ onClose }: { onClose: () => void }) {
-  // Initialize Formspree hook with your unique ID
   const [state, handleSubmit] = useForm("mljdoanv");
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  // If submission is successful, show a success screen inside the modal
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, []);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      dialogRef.current?.querySelector<HTMLElement>(state.succeeded ? 'button' : 'input')?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [state.succeeded]);
+
+  const handleDialogKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Tab' || !dialogRef.current) return;
+    const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ));
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  };
+
   if (state.succeeded) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-[hsl(var(--primary)/.78)] p-4 backdrop-blur-sm">
-        <div className="modal-in relative w-full max-w-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-9 shadow-2xl text-center">
+        <div ref={dialogRef} onKeyDown={handleDialogKeyDown} className="modal-in relative w-full max-w-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-9 text-center shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="contact-success-title">
           <button type="button" onClick={onClose} className="icon-button absolute right-4 top-4" aria-label="Close confirmation">
             <X className="h-5 w-5" />
           </button>
@@ -303,7 +366,7 @@ function ContactModal({ onClose }: { onClose: () => void }) {
             <Check className="h-6 w-6" />
           </div>
           
-          <h2 className="font-display text-3xl font-bold text-[hsl(var(--foreground))]">Enquiry Received.</h2>
+          <h2 id="contact-success-title" className="font-display text-3xl font-bold text-[hsl(var(--foreground))]">Enquiry received.</h2>
           <p className="mt-4 max-w-md mx-auto text-sm leading-6 text-[hsl(var(--muted-foreground))]">
             Thank you for contacting WORSTART SHIPPING. We have received your route details and will review them shortly.
           </p>
@@ -323,7 +386,7 @@ function ContactModal({ onClose }: { onClose: () => void }) {
       role="presentation"
       onMouseDown={(event) => event.target === event.currentTarget && onClose()}
     >
-      <div className="modal-in relative w-full max-w-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-6 shadow-2xl sm:p-9" role="dialog" aria-modal="true" aria-labelledby="contact-modal-title">
+      <div ref={dialogRef} onKeyDown={handleDialogKeyDown} className="modal-in relative w-full max-w-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-6 shadow-2xl sm:p-9" role="dialog" aria-modal="true" aria-labelledby="contact-modal-title">
         
         <button type="button" onClick={onClose} className="icon-button absolute right-4 top-4" aria-label="Close logistics enquiry">
           <X className="h-5 w-5" />
@@ -336,13 +399,24 @@ function ContactModal({ onClose }: { onClose: () => void }) {
         </p>
 
         {/* FORM STARTS HERE */}
-        <form onSubmit={handleSubmit} className="mt-7 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-7 space-y-4" aria-busy={state.submitting}>
           
           <label className="block">
             <span className="field-label">Your Name</span>
             <input required type="text" name="name" className="field-input" placeholder="Full Name" />
             <ValidationError prefix="Name" field="name" errors={state.errors} />
           </label>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="field-label">Company</span>
+              <input type="text" name="company" className="field-input" placeholder="Company name" />
+            </label>
+            <label className="block">
+              <span className="field-label">Phone</span>
+              <input type="tel" name="phone" className="field-input" placeholder="+ country code" />
+            </label>
+          </div>
           
           <label className="block">
             <span className="field-label">Business Email</span>
@@ -364,6 +438,24 @@ function ContactModal({ onClose }: { onClose: () => void }) {
             </label>
           </div>
 
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="field-label">Cargo / shipment type</span>
+              <input required type="text" name="cargo_type" className="field-input" placeholder="Goods, volume, handling needs" />
+            </label>
+            <label className="block">
+              <span className="field-label">Service required</span>
+              <select required name="service" className="field-input" defaultValue="">
+                <option value="" disabled>Select a service</option>
+                <option>Freight &amp; Logistics</option>
+                <option>Fulfillment &amp; Warehousing</option>
+                <option>Customs &amp; Documentation</option>
+                <option>Shipment Visibility</option>
+                <option>Other</option>
+              </select>
+            </label>
+          </div>
+
           <label className="block">
             <span className="field-label">Cargo & Service Details</span>
             <textarea required rows={3} name="message" className="field-input resize-none" placeholder="What are you moving? Freight, fulfillment, customs docs?" />
@@ -375,9 +467,15 @@ function ContactModal({ onClose }: { onClose: () => void }) {
             disabled={state.submitting} 
             className="button-primary mt-3 flex w-full justify-between"
           >
-            {state.submitting ? 'Sending...' : 'Prepare Enquiry'}
+            {state.submitting ? 'Sending enquiry...' : 'Send logistics enquiry'}
             {!state.submitting && <ArrowUpRight className="h-4 w-4" />}
           </button>
+
+          {state.errors && (
+            <p role="alert" className="text-sm leading-6 text-[hsl(var(--destructive))]">
+              We couldn’t send your enquiry. Please check the required fields and try again.
+            </p>
+          )}
           
           <p className="font-mono-ui text-[0.58rem] uppercase tracking-[.1em] text-[hsl(var(--muted-foreground))]">
             Secure submission via Formspree. No spam.
@@ -393,6 +491,12 @@ function Home() {
   const [contactOpen, setContactOpen] = useState(false);
   const [headerScrolled, setHeaderScrolled] = useState(false);
   const [activeCapability, setActiveCapability] = useState<string | null>(null);
+  const [activeMarketCode, setActiveMarketCode] = useState('DZ');
+  const [heroImageSrc, setHeroImageSrc] = useState('https://images.unsplash.com/photo-1494412574643-ff11b0e5d82f?q=80&w=2000&auto=format&fit=crop');
+  const activeMarket = markets.find((market) => market.code === activeMarketCode) ?? markets[0];
+  const shouldReduceMotion = useReducedMotion();
+  const safeStaggerContainer = useSafeVariants(staggerContainer);
+  const safeStaggerItem = useSafeVariants(staggerItem);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const firstMenuItemRef = useRef<HTMLAnchorElement>(null);
 
@@ -518,7 +622,7 @@ function Home() {
             height: menuOpen ? 'auto' : 0,
             opacity: menuOpen ? 1 : 0,
           }}
-          transition={{ duration: 0.3, ease: "easeInOut" }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.3, ease: "easeInOut" }}
           className={`overflow-hidden mobile-panel ${menuOpen ? 'mobile-panel-open' : ''}`} 
           aria-hidden={!menuOpen}
         >
@@ -556,7 +660,16 @@ function Home() {
 
       <main id="top">
         {/* HERO SECTION */}
-        <section className="page-grid hero-section relative flex items-center overflow-hidden border-b border-[hsl(var(--border))]">
+        <section className="page-grid hero-section hero-section-cinematic relative flex items-center overflow-hidden border-b border-[hsl(var(--border))]">
+          <img
+            src={heroImageSrc}
+            onError={() => setHeroImageSrc('https://images.unsplash.com/photo-1578575437130-527eed3abbec?q=80&w=2000&auto=format&fit=crop')}
+            alt=""
+            aria-hidden="true"
+            fetchPriority="high"
+            className="hero-background-image absolute inset-0 h-full w-full object-cover"
+          />
+          <div className="hero-image-overlay absolute inset-0 bg-black/60" aria-hidden="true" />
           <div className="container-wide relative z-10 grid w-full items-center gap-8 lg:grid-cols-[1.03fr_.97fr] lg:gap-5">
             
             <div className="hero-copy max-w-[680px]">
@@ -575,13 +688,13 @@ function Home() {
               <motion.h1 
                 initial="hidden" 
                 animate="visible" 
-                variants={staggerContainer}
+                variants={safeStaggerContainer}
                 className="mt-7 max-w-[14ch] text-balance font-display font-bold leading-[.89] tracking-[-.065em] text-[hsl(var(--foreground))]"
               >
                  {heroTitleWords.map((word, i) => (
                    <motion.span 
                      key={i} 
-                     variants={staggerItem}
+                     variants={safeStaggerItem}
                      className={word.includes("route") || word.includes("clear") ? "inline-block text-[hsl(var(--accent))]" : "inline-block"}
                    >
                      {word}&nbsp;
@@ -612,20 +725,25 @@ function Home() {
                    Start a logistics enquiry
                   <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 </a>
-                <a href="#markets" className="link-arrow inline-flex min-h-12 items-center gap-3 text-sm font-semibold text-[hsl(var(--foreground))]" data-testid="link-hero-markets">
-                   Explore our lanes <ArrowRight className="h-4 w-4 text-[hsl(var(--accent))]" />
+                    <a href="#capabilities" className="link-arrow inline-flex min-h-12 items-center gap-3 text-sm font-semibold text-[hsl(var(--foreground))]" data-testid="link-hero-markets">
+                      Explore services <ArrowRight className="h-4 w-4 text-[hsl(var(--accent))]" />
                 </a>
               </motion.div>
             </div>
 
             {/* Graphic Fade In */}
             <motion.div 
-              initial={{ opacity: 0, x: 20 }} 
+              initial={shouldReduceMotion ? false : { opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }} 
-              transition={{ duration: 0.8, delay: 0.3 }}
+              transition={{ duration: shouldReduceMotion ? 0 : 0.8, delay: shouldReduceMotion ? 0 : 0.3 }}
               className="hero-graphic-wrap flex w-full justify-center lg:justify-end"
             >
-              <NetworkGraphic />
+              <div className="w-full">
+                <NetworkGraphic />
+                <div className="hero-network-metadata" aria-label="Network capabilities">
+                  <span>Global network</span><span>Multi-modal</span><span>End-to-end</span><span>Shipment visibility</span>
+                </div>
+              </div>
             </motion.div>
           </div>
           
@@ -636,14 +754,25 @@ function Home() {
           <span className="absolute right-5 top-1/2 hidden -rotate-90 font-mono-ui text-[0.57rem] uppercase tracking-[.2em] text-[hsl(var(--muted-foreground))] lg:block">WS / 001</span>
         </section>
 
+        <section className="trust-strip border-b border-[hsl(var(--border))] bg-white py-6" aria-label="Illustrative network references">
+          <div className="container-wide flex flex-col items-center gap-5 sm:flex-row sm:justify-between sm:gap-8">
+            <span className="font-mono-ui text-[0.56rem] uppercase tracking-[.12em] text-gray-500">Illustrative references / not affiliated</span>
+            <div className="flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-3 sm:w-auto sm:gap-9" aria-label="Illustrative reference names">
+              <span className="text-sm font-bold uppercase tracking-[.16em] text-gray-400">MAERSK</span>
+              <span className="text-sm font-bold uppercase tracking-[.16em] text-gray-400">CLARKSONS</span>
+              <span className="text-sm font-bold uppercase tracking-[.16em] text-gray-400">BEZOS</span>
+            </div>
+          </div>
+        </section>
+
         {/* ECOSYSTEM STRIP */}
         <section className="ecosystem-strip border-b border-[hsl(var(--border))] bg-[hsl(var(--background))]">
           <div className="container-wide flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:gap-8">
-            <span className="font-mono-ui text-[0.6rem] uppercase tracking-[.16em] text-[hsl(var(--accent))]">Connected by WORSTART</span>
+            <span className="font-mono-ui text-[0.6rem] uppercase tracking-[.16em] text-[hsl(var(--accent))]">Movement, coordinated</span>
             <div className="ecosystem-marquee" aria-label="WORSTART ecosystem labels">
               <div className="ecosystem-marquee-track">
-                <span>Bank Online</span><i>·</i><span>DZ Seller</span><i>·</i><span>Car Leasing &amp; Booking</span><i>·</i><span>Future Maritime</span>
-                <span aria-hidden="true">Bank Online</span><i aria-hidden="true">·</i><span aria-hidden="true">DZ Seller</span><i aria-hidden="true">·</i><span aria-hidden="true">Car Leasing &amp; Booking</span><i aria-hidden="true">·</i><span aria-hidden="true">Future Maritime</span>
+                <span>Shippers</span><i>·</i><span>Freight partners</span><i>·</i><span>Warehouses</span><i>·</i><span>Customs</span><i>·</i><span>Transport</span><i>·</i><span>Final delivery</span>
+                <span aria-hidden="true">Shippers</span><i aria-hidden="true">·</i><span aria-hidden="true">Freight partners</span><i aria-hidden="true">·</i><span aria-hidden="true">Warehouses</span><i aria-hidden="true">·</i><span aria-hidden="true">Customs</span><i aria-hidden="true">·</i><span aria-hidden="true">Transport</span><i aria-hidden="true">·</i><span aria-hidden="true">Final delivery</span>
               </div>
             </div>
           </div>
@@ -663,41 +792,62 @@ function Home() {
             </div>
             
             {/* Staggered Grid */}
-            <motion.div 
+            <motion.div
               initial="hidden" 
               whileInView="visible" 
               viewport={{ once: true, margin: "-100px" }}
-              variants={staggerContainer}
-              className="capability-grid mt-14 md:mt-16"
+              variants={safeStaggerContainer}
+              className="capability-features mt-14 md:mt-20"
             >
-              {capabilities.map((capability) => {
-                const Icon = capability.icon;
-                const expanded = activeCapability === capability.number;
-                return (
-                  <motion.article 
-                    key={capability.number} 
-                    variants={staggerItem}
-                    className={`service-card ${expanded ? 'service-card-expanded' : ''}`} 
-                    data-testid={`card-capability-${capability.number}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono-ui text-xs text-[hsl(var(--accent))]" data-testid={`text-capability-number-${capability.number}`}>{capability.number}</span>
-                      <span className="service-icon flex h-10 w-10 items-center justify-center border border-[hsl(var(--border))] text-[hsl(var(--foreground)/.65)]">
-                        <Icon className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
-                      </span>
-                    </div>
-                    <h3 className="mt-8 font-display text-2xl font-bold tracking-[-.03em] text-[hsl(var(--foreground))]" data-testid={`text-capability-title-${capability.number}`}>{capability.title}</h3>
-                    <p className="mt-4 text-sm leading-6 text-[hsl(var(--muted-foreground))]">{capability.body}</p>
-                    <ul className="service-bullets mt-6 space-y-3">
-                      {capability.bullets.map((bullet) => <li key={bullet}><span />{bullet}</li>)}
-                    </ul>
-                    <button type="button" className="service-detail-toggle mt-7" onClick={() => setActiveCapability(expanded ? null : capability.number)} aria-expanded={expanded}>
-                      {expanded ? 'Close detail' : 'Learn more'} <ArrowUpRight className="h-3.5 w-3.5" />
-                    </button>
-                    {expanded && <p className="service-detail mt-4 border-t border-[hsl(var(--border))] pt-4 text-xs leading-5 text-[hsl(var(--muted-foreground))]">This is an intended operating model. Specific partner, carrier and service details are confirmed for each movement.</p>}
-                  </motion.article>
-                );
-              })}
+              {capabilityGroups.map((group, groupIndex) => (
+                <motion.div
+                  key={group[0].number}
+                  variants={safeStaggerItem}
+                  className={`service-feature-row ${groupIndex === 1 ? 'service-feature-row-reverse' : ''}`}
+                >
+                  <div className="service-feature-image-wrap">
+                    <img
+                      src={groupIndex === 0
+                        ? 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=1000&auto=format&fit=crop'
+                        : 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?q=80&w=1000&auto=format&fit=crop'}
+                      alt={groupIndex === 0 ? 'Warehouse operations and freight handling' : 'Preparing international shipping documents'}
+                      loading="lazy"
+                      className="service-feature-image h-full w-full object-cover"
+                    />
+                    <span className="service-image-index" aria-hidden="true">0{groupIndex + 1} / 02</span>
+                  </div>
+                  <div className="service-feature-copy">
+                    {group.map((capability) => {
+                      const Icon = capability.icon;
+                      const expanded = activeCapability === capability.number;
+                      return (
+                        <motion.article
+                          key={capability.number}
+                          variants={safeStaggerItem}
+                          className={`service-card ${expanded ? 'service-card-expanded' : ''}`}
+                          data-testid={`card-capability-${capability.number}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono-ui text-xs text-[hsl(var(--accent))]" data-testid={`text-capability-number-${capability.number}`}>{capability.number}</span>
+                            <span className="service-icon flex h-10 w-10 items-center justify-center border border-[hsl(var(--border))] text-[hsl(var(--foreground)/.65)]">
+                              <Icon className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+                            </span>
+                          </div>
+                          <h3 className="mt-5 font-display text-2xl font-bold tracking-[-.03em] text-[hsl(var(--foreground))]" data-testid={`text-capability-title-${capability.number}`}>{capability.title}</h3>
+                          <p className="mt-3 text-sm leading-6 text-[hsl(var(--muted-foreground))]">{capability.body}</p>
+                          <ul className="service-bullets mt-5 space-y-3">
+                            {capability.bullets.map((bullet) => <li key={bullet}><span />{bullet}</li>)}
+                          </ul>
+                          <button type="button" className="service-detail-toggle mt-5" onClick={() => setActiveCapability(expanded ? null : capability.number)} aria-expanded={expanded} aria-controls={`service-detail-${capability.number}`}>
+                            {expanded ? 'Close detail' : 'Learn more'} <ArrowUpRight className="h-3.5 w-3.5" />
+                          </button>
+                          <p hidden={!expanded} id={`service-detail-${capability.number}`} role="region" aria-label={`${capability.title} operational details`} className="service-detail mt-4 border-t border-[hsl(var(--border))] pt-4 text-xs leading-5 text-[hsl(var(--muted-foreground))]">{capability.operational}</p>
+                        </motion.article>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              ))}
             </motion.div>
           </div>
         </section>
@@ -715,38 +865,72 @@ function Home() {
               <p className="max-w-xs text-sm leading-6 text-[hsl(var(--primary-foreground)/.62)]">An initial network view across North Africa, Asia, Europe, Eurasia, the Gulf region and North America. Route details are confirmed per movement.</p>
             </div>
             
-            {/* Horizontal Scroll Rail with Stagger */}
-            <motion.div 
-              initial="hidden" 
-              whileInView="visible" 
-              viewport={{ once: true, amount: 0.2 }}
-              variants={staggerContainer}
-              className="markets-rail mt-14 md:mt-16" 
-              tabIndex={0} 
-              aria-label="WORSTART market network"
-            >
-              {markets.map((market, index) => (
-                <motion.article 
-                  key={market.code} 
-                  variants={staggerItem}
-                  className="market-card group relative min-h-[190px] bg-[hsl(var(--primary))] p-5 md:min-h-[220px] md:p-7" 
-                  data-testid={`card-market-${market.code}`}
-                >
-                  <div className="flex items-start justify-between">
-                    <span className="font-mono-ui text-xs text-[hsl(var(--accent))]">{String(index + 1).padStart(2, '0')}</span>
-                    <ArrowUpRight className="h-4 w-4 text-[hsl(var(--primary-foreground)/.38)] transition-transform group-hover:-translate-y-1 group-hover:translate-x-1" />
-                  </div>
-                  <div className="mt-8">
-                    <h3 className="market-title font-display text-2xl font-bold tracking-[-.035em]">{market.name}</h3>
-                    <p className="mt-2 font-mono-ui text-[0.58rem] uppercase tracking-[.13em] text-[hsl(var(--primary-foreground)/.48)]">{market.note}</p>
-                    <p className="market-route mt-5 max-w-[18rem] text-sm leading-6 text-[hsl(var(--primary-foreground)/.64)]">{market.route}</p>
-                  </div>
-                </motion.article>
-              ))}
-            </motion.div>
-              <div className="mt-7 flex items-center justify-between gap-3 font-mono-ui text-[0.62rem] uppercase tracking-[.13em] text-[hsl(var(--primary-foreground)/.48)]">
-              <span className="flex items-center gap-3"><Globe2 className="h-4 w-4 text-[hsl(var(--accent))]" /> Route descriptions, not performance claims</span>
-              <span className="hidden sm:inline">Scroll / drag to explore</span>
+            <div className="network-explorer mt-14 md:mt-16">
+              <div className="network-map" role="group" aria-label="Select a WORSTART operating market">
+                <svg className="network-map-routes" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                  {markets.map((market) => (
+                    <line
+                      key={market.code}
+                      x1="50"
+                      y1="50"
+                      x2={market.point.x}
+                      y2={market.point.y}
+                      className={activeMarketCode === market.code ? 'network-map-route network-map-route-active' : 'network-map-route'}
+                    />
+                  ))}
+                </svg>
+                {markets.map((market, index) => (
+                  <button
+                    key={market.code}
+                    type="button"
+                    className={`network-map-node ${activeMarketCode === market.code ? 'network-map-node-active' : ''}`}
+                    style={{ left: `${market.point.x}%`, top: `${market.point.y}%` }}
+                    onClick={() => setActiveMarketCode(market.code)}
+                    aria-label={`Select ${market.name} market`}
+                    aria-pressed={activeMarketCode === market.code}
+                    data-testid={`button-market-${market.code}`}
+                  >
+                    <span className="network-map-node-code">{market.code}</span>
+                    <span className="network-map-node-label">{market.name}</span>
+                    <span className="sr-only">Market {String(index + 1).padStart(2, '0')}</span>
+                  </button>
+                ))}
+                <div className="network-map-core" aria-label="WORSTART SHIPPING network hub">
+                  <span className="font-display text-2xl font-bold">W</span>
+                  <span>WORSTART</span>
+                </div>
+                <span className="network-map-caption">Illustrative operating network / no live route data</span>
+              </div>
+              <aside className="network-market-panel" aria-live="polite" aria-atomic="true">
+                <div className="network-market-detail">
+                  <span className="eyebrow">Market / {activeMarket.code}</span>
+                  <h3 className="mt-5 font-display text-3xl font-bold tracking-[-.04em]">{activeMarket.name}</h3>
+                  <p className="mt-2 font-mono-ui text-[0.62rem] uppercase tracking-[.12em] text-[hsl(var(--primary-foreground)/.5)]">{activeMarket.note}</p>
+                  <p className="mt-6 max-w-sm text-sm leading-6 text-[hsl(var(--primary-foreground)/.7)]">{activeMarket.route}</p>
+                  <a href="#contact" className="network-market-cta mt-7 inline-flex items-center gap-3" data-testid="link-market-enquiry">
+                    Discuss a route <ArrowUpRight className="h-4 w-4" />
+                  </a>
+                </div>
+                <div className="network-market-selector" role="group" aria-label="Choose a market">
+                  {markets.map((market, index) => (
+                    <button
+                      key={market.code}
+                      type="button"
+                      className={`network-market-option ${activeMarketCode === market.code ? 'network-market-option-active' : ''}`}
+                      onClick={() => setActiveMarketCode(market.code)}
+                      aria-pressed={activeMarketCode === market.code}
+                      data-testid={`select-market-${market.code}`}
+                    >
+                      <span className="font-mono-ui text-[0.62rem] text-[hsl(var(--accent))]">{String(index + 1).padStart(2, '0')}</span>
+                      <span>{market.name}</span>
+                      <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                  ))}
+                </div>
+              </aside>
+            </div>
+            <div className="mt-7 flex items-center gap-3 font-mono-ui text-[0.62rem] uppercase tracking-[.13em] text-[hsl(var(--primary-foreground)/.48)]">
+              <Globe2 className="h-4 w-4 text-[hsl(var(--accent))]" /> Route descriptions, not performance claims
             </div>
           </div>
         </section>
@@ -760,7 +944,7 @@ function Home() {
                 <h2 className="mt-5 max-w-lg font-display text-4xl font-bold leading-[.98] tracking-[-.05em] text-[hsl(var(--foreground))] md:text-6xl">One logistics layer connecting digital and physical business.</h2>
               </div>
               <div className="max-w-xl lg:pt-10">
-                <p className="text-lg leading-8 text-[hsl(var(--muted-foreground))]">WORSTART SHIPPING is designed to sit between the workflows that create demand and the handoffs that move goods: finance, commerce, mobility and future maritime expansion.</p>
+                <p className="text-lg leading-8 text-[hsl(var(--muted-foreground))]">WORSTART SHIPPING coordinates the people and operational handoffs around movement: shippers, freight partners, warehouses, documentation, transport and final delivery.</p>
               </div>
             </div>
             
@@ -769,21 +953,21 @@ function Home() {
               initial="hidden" 
               whileInView="visible" 
               viewport={{ once: true, margin: "-100px" }}
-              variants={staggerContainer}
+              variants={safeStaggerContainer}
               className="ecosystem-map mt-14"
             >
               <div className="ecosystem-center">
-                <span className="font-mono-ui text-[0.58rem] uppercase tracking-[.15em] text-[hsl(var(--accent))]">Movement layer</span>
+                <span className="font-mono-ui text-[0.58rem] uppercase tracking-[.15em] text-[hsl(var(--accent))]">Connected operations</span>
                 <strong className="mt-3 font-display text-3xl tracking-[-.05em]">WORSTART<br />SHIPPING</strong>
-                <span className="mt-4 max-w-[13rem] text-xs leading-5 text-[hsl(var(--primary-foreground)/.62)]">Route, fulfillment and handoff context between ecosystem services.</span>
+                <span className="mt-4 max-w-[13rem] text-xs leading-5 text-[hsl(var(--primary-foreground)/.62)]">One coordinated route across partners and handoffs.</span>
               </div>
-              <div className="ecosystem-connectors" aria-hidden="true"><span /><span /><span /><span /></div>
+              <div className="ecosystem-connectors" aria-hidden="true"><span /><span /><span /><span /><span /><span /></div>
               {ecosystemLayers.map((layer) => {
                 const Icon = layer.icon;
                 return (
                   <motion.article 
                     key={layer.number} 
-                    variants={staggerItem}
+                    variants={safeStaggerItem}
                     className={`ecosystem-card ecosystem-card-${layer.number}`}
                   >
                     <div className="flex items-center justify-between">
@@ -807,20 +991,27 @@ function Home() {
           <div className="container-wide">
             <div className="grid gap-14 lg:grid-cols-[.75fr_1.25fr] lg:gap-24">
               <div>
-                <p className="eyebrow">How it works / intended operating model</p>
+                <p className="eyebrow">How it works / four operational steps</p>
                 <h2 className="mt-5 font-display text-4xl font-bold leading-[.98] tracking-[-.05em] text-[hsl(var(--foreground))] md:text-6xl">A clear path from origin to the next confirmed handoff.</h2>
                 <p className="mt-7 max-w-md text-sm leading-6 text-[hsl(var(--muted-foreground))]">This is the intended way to structure a logistics conversation. It is not a live shipment timeline.</p>
               </div>
               <div>
                 <div className="process-timeline">
-                  <div className="process-line" aria-hidden="true" />
+                  <motion.div
+                    initial={shouldReduceMotion ? false : { scaleX: 0, scaleY: 0 }}
+                    whileInView={{ scaleX: 1, scaleY: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: shouldReduceMotion ? 0 : 1.2, delay: shouldReduceMotion ? 0 : 0.2 }}
+                    className="process-line"
+                    aria-hidden="true"
+                  />
                   
                   {/* Timeline Steps Stagger */}
                   <motion.div 
                     initial="hidden" 
                     whileInView="visible" 
                     viewport={{ once: true, margin: "-50px" }}
-                    variants={staggerContainer}
+                    variants={safeStaggerContainer}
                     className="contents"
                   >
                     {processSteps.map((step) => {
@@ -828,7 +1019,7 @@ function Home() {
                       return (
                         <motion.article 
                           key={step.number} 
-                          variants={staggerItem}
+                          variants={safeStaggerItem}
                           className="process-step reveal-on-scroll"
                         >
                           <div className="process-step-marker">
@@ -864,13 +1055,13 @@ function Home() {
               initial="hidden" 
               whileInView="visible" 
               viewport={{ once: true, margin: "-100px" }}
-              variants={staggerContainer}
+              variants={safeStaggerContainer}
               className="principles-grid mt-14 border-t border-[hsl(var(--primary-foreground)/.18)]"
             >
               {principles.map((principle) => (
                 <motion.article 
                   key={principle.number} 
-                  variants={staggerItem}
+                  variants={safeStaggerItem}
                   className="principle-card"
                 >
                   <span className="font-mono-ui text-xs text-[hsl(var(--accent))]">{principle.number}</span>
@@ -889,10 +1080,10 @@ function Home() {
               
               {/* Visual Side Fade In */}
               <motion.div 
-                initial={{ opacity: 0, x: -20 }} 
+                initial={shouldReduceMotion ? false : { opacity: 0, x: -20 }}
                 whileInView={{ opacity: 1, x: 0 }} 
                 viewport={{ once: true }}
-                transition={{ duration: 0.8 }}
+                transition={{ duration: shouldReduceMotion ? 0 : 0.8 }}
                 className="coordinate-visual page-grid relative min-h-[360px] overflow-hidden border border-[hsl(var(--border))] p-7 md:min-h-[420px] md:p-10"
               >
                 <div className="coordinate-orbit coordinate-orbit-one" />
@@ -914,20 +1105,20 @@ function Home() {
                 initial="hidden" 
                 whileInView="visible" 
                 viewport={{ once: true, margin: "-100px" }}
-                variants={staggerContainer}
+                variants={safeStaggerContainer}
               >
-                <motion.p variants={staggerItem} className="eyebrow">What we coordinate</motion.p>
-                <motion.h2 variants={staggerItem} className="mt-5 max-w-xl font-display text-4xl font-bold leading-[.98] tracking-[-.05em] text-[hsl(var(--foreground))] md:text-6xl">Less ambiguity between one move and the next.</motion.h2>
-                <motion.p variants={staggerItem} className="mt-7 max-w-xl text-lg leading-8 text-[hsl(var(--muted-foreground))]">The logistics layer is where cargo context, documents, service need and partner confirmation meet. We keep that conversation structured.</motion.p>
+                <motion.p variants={safeStaggerItem} className="eyebrow">What we coordinate</motion.p>
+                <motion.h2 variants={safeStaggerItem} className="mt-5 max-w-xl font-display text-4xl font-bold leading-[.98] tracking-[-.05em] text-[hsl(var(--foreground))] md:text-6xl">Less ambiguity between one move and the next.</motion.h2>
+                <motion.p variants={safeStaggerItem} className="mt-7 max-w-xl text-lg leading-8 text-[hsl(var(--muted-foreground))]">The logistics layer is where cargo context, documents, service need and partner confirmation meet. We keep that conversation structured.</motion.p>
                 
-                <motion.div variants={staggerItem} className="coordination-list mt-10 border-t border-[hsl(var(--border))]">
+                <motion.div variants={safeStaggerItem} className="coordination-list mt-10 border-t border-[hsl(var(--border))]">
                   {coordinationItems.map((item) => (
-                    <div key={item} className="coordination-item"><span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--accent))]" />{item}<ArrowUpRight className="ml-auto h-4 w-4 text-[hsl(var(--accent))]" /></div>
+                    <div key={item} className="coordination-item"><span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--accent))]" />{item}</div>
                   ))}
                 </motion.div>
                 
                 <motion.a 
-                  variants={staggerItem}
+                  variants={safeStaggerItem}
                   href="#contact" 
                   className="button-secondary mt-8"
                 >
@@ -949,28 +1140,37 @@ function Home() {
               </div>
               
               <motion.div 
-                initial={{ opacity: 0, y: 30 }} 
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }} 
                 viewport={{ once: true }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-                className="shipment-panel rounded-[1.75rem] bg-[hsl(var(--background))] p-5 shadow-[0_20px_70px_rgba(30,48,68,.1)] md:p-8"
+                transition={{ duration: shouldReduceMotion ? 0 : 0.8, delay: shouldReduceMotion ? 0 : 0.2 }}
+                className="shipment-panel bg-[hsl(var(--background))] p-5 shadow-[0_20px_70px_rgba(30,48,68,.1)] md:p-8"
               >
                 <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[hsl(var(--border))] pb-5">
-                  <div><span className="field-label">Illustrative workflow</span><h3 className="mt-2 font-display text-2xl font-bold text-[hsl(var(--foreground))]">Route context / sample</h3></div>
-                  <span className="workflow-badge"><span />Not live</span>
+                  <div><span className="field-label">Illustrative shipment / not live</span><h3 className="mt-2 font-display text-2xl font-bold text-[hsl(var(--foreground))]">WS-2048</h3></div>
+                  <span className="workflow-badge"><span />In transit</span>
                 </div>
                 <div className="shipment-route-bar mt-6">
-                  <div><span className="field-label">Origin</span><strong>Algeria</strong></div>
-                  <div className="shipment-route-line"><span /><span /><span /></div>
-                  <div className="text-right"><span className="field-label">Destination</span><strong>European Union</strong></div>
+                  <div><span className="field-label">Origin</span><strong>Shanghai, China</strong></div>
+                  <div className="shipment-route-line" aria-hidden="true"><span /><span /><span /></div>
+                  <div className="text-right"><span className="field-label">Destination</span><strong>Algiers, Algeria</strong></div>
                 </div>
-                <div className="shipment-detail-grid mt-8">
-                  <div><span className="field-label">Cargo / service need</span><strong>Example cargo context</strong></div>
-                  <div><span className="field-label">Current stage</span><strong>Route brief</strong></div>
-                  <div><span className="field-label">Documents</span><strong><Check className="mr-2 inline h-4 w-4 text-[hsl(var(--accent))]" />Information to review</strong></div>
-                  <div><span className="field-label">Next handoff</span><strong>Confirmation required</strong></div>
+                <div className="shipment-progress-heading mt-8">
+                  <span className="field-label">Operational milestones</span>
+                  <span className="font-mono-ui text-[0.62rem] uppercase tracking-[.1em] text-[hsl(var(--accent))]">03 / 05</span>
                 </div>
-                <div className="mt-8 border-t border-[hsl(var(--border))] pt-5 text-xs leading-5 text-[hsl(var(--muted-foreground))]">Sample content only. A real movement would be shaped around confirmed cargo, documents, route and partner details.</div>
+                <ol className="shipment-milestones" aria-label="Illustrative shipment milestones">
+                  {shipmentMilestones.map((milestone, index) => {
+                    const state = index < 2 ? 'complete' : index === 2 ? 'current' : 'upcoming';
+                    return (
+                      <li key={milestone} className={`shipment-milestone shipment-milestone-${state}`} aria-current={state === 'current' ? 'step' : undefined}>
+                        <span className="shipment-milestone-marker">{state === 'complete' ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : String(index + 1).padStart(2, '0')}</span>
+                        <span>{milestone}</span>
+                      </li>
+                    );
+                  })}
+                </ol>
+                <div className="mt-7 border-t border-[hsl(var(--border))] pt-5 text-xs leading-5 text-[hsl(var(--muted-foreground))]">Illustrative interface only. WS-2048 and its route are sample content, not a real customer shipment or a live tracking result.</div>
               </motion.div>
             </div>
           </div>
@@ -997,10 +1197,10 @@ function Home() {
         <section id="contact" className="bg-[hsl(var(--background))] px-0 py-20 md:py-28">
           <div className="container-wide">
             <motion.div 
-              initial={{ opacity: 0, scale: 0.98 }} 
+              initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.98 }}
               whileInView={{ opacity: 1, scale: 1 }} 
               viewport={{ once: true }}
-              transition={{ duration: 0.8 }}
+              transition={{ duration: shouldReduceMotion ? 0 : 0.8 }}
               className="contact-panel relative overflow-hidden rounded-[2rem] bg-[hsl(var(--primary))] p-7 text-[hsl(var(--primary-foreground))] md:p-12 lg:p-16"
             >
               <div className="cta-orbit cta-orbit-large absolute -right-10 top-1/2 h-64 w-64 -translate-y-1/2 rounded-full md:right-[8%]" />
@@ -1009,7 +1209,7 @@ function Home() {
                 <div>
                   <p className="eyebrow">Start a logistics enquiry</p>
                   <h2 className="mt-5 max-w-3xl font-display text-5xl font-bold leading-[.93] tracking-[-.06em] md:text-7xl">Move goods<br /><span className="text-[hsl(var(--accent))]">with clarity.</span></h2>
-                  <p className="mt-7 max-w-md text-sm leading-6 text-[hsl(var(--primary-foreground)/.66)]">Share your route, cargo context and service need. This presentation flow shows how the conversation starts; details are not sent yet.</p>
+                  <p className="mt-7 max-w-md text-sm leading-6 text-[hsl(var(--primary-foreground)/.66)]">Share your route, cargo context and service need. Enquiries are sent through WORSTART’s configured Formspree endpoint; a confirmation appears only after the service accepts them.</p>
                   <button type="button" onClick={() => setContactOpen(true)} className="button-cta-outline mt-7" data-testid="button-open-contact">
                     Start a logistics enquiry <ArrowUpRight className="h-4 w-4" />
                   </button>
@@ -1029,14 +1229,62 @@ function Home() {
         </section>
       </main>
 
+      <section className="bg-gray-50 py-20 md:py-24" aria-labelledby="testimonials-title">
+        <div className="container-wide">
+          <div className="mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+            <div>
+              <p className="eyebrow">Illustrative client stories / sample copy</p>
+              <h2 id="testimonials-title" className="mt-4 max-w-2xl font-display text-3xl font-bold leading-tight tracking-[-.04em] text-[hsl(var(--foreground))] md:text-5xl">Partnership, in their words.</h2>
+            </div>
+            <p className="max-w-sm text-xs leading-5 text-gray-500">These sample testimonials are placeholders, not verified customer endorsements.</p>
+          </div>
+          <div className="grid gap-5 md:grid-cols-2">
+            <article className="rounded-md bg-white p-6 shadow-md md:p-8">
+              <span className="font-display text-5xl leading-none text-[hsl(var(--accent))]" aria-hidden="true">“</span>
+              <blockquote className="mt-2 text-lg italic leading-7 text-[hsl(var(--foreground))]">Their platform optimized our supply chain, saving us 20% in costs.</blockquote>
+              <div className="mt-7 flex items-center gap-3 border-t border-gray-100 pt-5">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 font-mono-ui text-xs text-gray-600" aria-hidden="true">MR</span>
+                <div><p className="text-sm font-semibold text-[hsl(var(--foreground))]">Maria Rodriguez</p><p className="mt-1 text-xs text-gray-500">TechLink Global / sample attribution</p></div>
+              </div>
+            </article>
+            <article className="rounded-md bg-white p-6 shadow-md md:p-8">
+              <span className="font-display text-5xl leading-none text-[hsl(var(--accent))]" aria-hidden="true">“</span>
+              <blockquote className="mt-2 text-lg italic leading-7 text-[hsl(var(--foreground))]">Reliable documentation handling made customs clearance effortless.</blockquote>
+              <div className="mt-7 flex items-center gap-3 border-t border-gray-100 pt-5">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 font-mono-ui text-xs text-gray-600" aria-hidden="true">AB</span>
+                <div><p className="text-sm font-semibold text-[hsl(var(--foreground))]">Ahmed Benali</p><p className="mt-1 text-xs text-gray-500">DZ Import Co. / sample attribution</p></div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[hsl(var(--primary))] py-20 text-[hsl(var(--primary-foreground))] md:py-24" aria-labelledby="network-statistics-title">
+        <div className="container-wide">
+          <div className="flex flex-col justify-between gap-5 border-b border-[hsl(var(--primary-foreground)/.2)] pb-7 md:flex-row md:items-end">
+            <div>
+              <p className="eyebrow">Illustrative operating scale</p>
+              <h2 id="network-statistics-title" className="mt-4 font-display text-3xl font-bold tracking-[-.04em] md:text-4xl">Network at a glance.</h2>
+            </div>
+            <p className="max-w-sm text-xs leading-5 text-gray-300">Sample figures only. These metrics must be verified before being presented as WORSTART performance claims.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-x-5 gap-y-9 pt-9 lg:grid-cols-4">
+            <div><p className="text-4xl font-bold text-white md:text-6xl">250+</p><p className="mt-3 text-sm uppercase tracking-[.12em] text-gray-300">Ports covered</p></div>
+            <div><p className="text-4xl font-bold text-white md:text-6xl">99.9%</p><p className="mt-3 text-sm uppercase tracking-[.12em] text-gray-300">On-time delivery</p></div>
+            <div><p className="text-4xl font-bold text-white md:text-6xl">1M</p><p className="mt-3 text-sm uppercase tracking-[.12em] text-gray-300">TEUs annually</p></div>
+            <div><p className="text-4xl font-bold text-white md:text-6xl">500</p><p className="mt-3 text-sm uppercase tracking-[.12em] text-gray-300">Global partners</p></div>
+          </div>
+        </div>
+      </section>
+
       <footer className="bg-[hsl(var(--primary))] py-12 text-[hsl(var(--primary-foreground))]">
         <div className="container-wide">
-          <div className="flex flex-col justify-between gap-10 border-b border-[hsl(var(--primary-foreground)/.18)] pb-10 md:flex-row md:items-start">
+          <div className="grid gap-10 border-b border-[hsl(var(--primary-foreground)/.18)] pb-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(240px,.85fr)] lg:items-start">
             <div>
               <a href="#top" aria-label="Back to WORSTART SHIPPING home" data-testid="link-footer-home"><BrandMark light /></a>
               <p className="mt-5 max-w-xs text-sm leading-6 text-[hsl(var(--primary-foreground)/.55)]">Route clarity, freight coordination and visibility between confirmed handoffs.</p>
             </div>
-            <div className="grid grid-cols-2 gap-x-14 gap-y-4 sm:grid-cols-4">
+            <nav className="grid grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-4" aria-label="Footer navigation">
               <a href="#top" className="footer-link" data-testid="link-footer-overview">Overview</a>
               <a href="#capabilities" className="footer-link" data-testid="link-footer-capabilities">Services</a>
               <a href="#markets" className="footer-link" data-testid="link-footer-markets">Network</a>
@@ -1045,17 +1293,31 @@ function Home() {
               <a href="#contact" className="footer-link" data-testid="link-footer-contact">Enquiry</a>
               <a href="#legal-notice" className="footer-link" data-testid="link-footer-privacy">Privacy</a>
               <a href="#legal-notice" className="footer-link" data-testid="link-footer-terms">Terms</a>
-            </div>
+            </nav>
+            <section aria-labelledby="newsletter-title">
+              <h2 id="newsletter-title" className="font-display text-lg font-bold text-[hsl(var(--primary-foreground))]">Newsletter</h2>
+              <p id="newsletter-status" className="mt-2 text-xs leading-5 text-[hsl(var(--primary-foreground)/.55)]">Sign-up is not connected yet. Your email will not be sent.</p>
+              <form className="mt-4 flex max-w-sm gap-2" onSubmit={(event) => event.preventDefault()}>
+                <label className="sr-only" htmlFor="newsletter-email">Email address</label>
+                <input id="newsletter-email" type="email" name="email" disabled aria-describedby="newsletter-status" placeholder="Email address" className="min-w-0 flex-1 border border-[hsl(var(--primary-foreground)/.25)] bg-transparent px-3 py-2 text-sm text-[hsl(var(--primary-foreground))] placeholder:text-[hsl(var(--primary-foreground)/.4)] disabled:cursor-not-allowed disabled:opacity-70" />
+                <button type="submit" disabled aria-label="Newsletter sign-up unavailable" className="border border-[hsl(var(--primary-foreground)/.3)] px-3 py-2 text-xs font-semibold uppercase tracking-[.08em] text-[hsl(var(--primary-foreground)/.55)] disabled:cursor-not-allowed">Join</button>
+              </form>
+            </section>
           </div>
           <div className="footer-ecosystem flex flex-col gap-3 border-b border-[hsl(var(--primary-foreground)/.18)] py-6 font-mono-ui text-[0.58rem] uppercase tracking-[.12em] text-[hsl(var(--primary-foreground)/.42)] sm:flex-row sm:items-center sm:gap-5">
-            <span className="text-[hsl(var(--accent))]">Ecosystem labels</span>
-            <span>Bank Online</span><i>·</i><span>DZ Seller</span><i>·</i><span>Car Leasing &amp; Booking</span><i>·</i><span>Future Maritime</span>
+            <span className="text-[hsl(var(--accent))]">Network participants</span>
+            <span>Shippers</span><i>·</i><span>Freight partners</span><i>·</i><span>Warehouses</span><i>·</i><span>Customs &amp; documentation</span><i>·</i><span>Transport</span><i>·</i><span>Final delivery</span>
           </div>
           <p id="legal-notice" className="pt-6 text-xs leading-5 text-[hsl(var(--primary-foreground)/.38)]">Privacy and terms details are to be confirmed before launch.</p>
           <div className="flex flex-col justify-between gap-3 pt-6 font-mono-ui text-[0.57rem] uppercase tracking-[.12em] text-[hsl(var(--primary-foreground)/.38)] sm:flex-row">
             <span>WORSTART SHIPPING</span>
             <span>Operational details to be confirmed</span>
             <span>Move goods with clarity</span>
+          </div>
+          <div className="mt-6 flex items-center gap-3" aria-label="Social media channels to be configured">
+            <span className="font-mono-ui text-[0.55rem] uppercase tracking-[.1em] text-[hsl(var(--primary-foreground)/.42)]">Social channels to be confirmed</span>
+            <span className="flex h-9 w-9 items-center justify-center border border-[hsl(var(--primary-foreground)/.22)] text-[hsl(var(--primary-foreground)/.7)]" aria-label="LinkedIn"><Linkedin className="h-4 w-4" aria-hidden="true" /></span>
+            <span className="flex h-9 w-9 items-center justify-center border border-[hsl(var(--primary-foreground)/.22)] text-[hsl(var(--primary-foreground)/.7)]" aria-label="Twitter"><Twitter className="h-4 w-4" aria-hidden="true" /></span>
           </div>
         </div>
       </footer>
