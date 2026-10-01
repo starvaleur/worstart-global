@@ -21,6 +21,9 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
+import { EnquiryModal } from '@/components/site/enquiry';
+import { ImportExportSection, CarsSection, LogisticsSection, TrackingSection, CommerceSection, VisaSection, EcosystemStatus } from '@/components/site/sections';
+import { ENQUIRY_EVENT, openEnquiry, type EnquiryPreset } from '@/lib/config';
 import {
   Route as WouterRoute,
   Switch,
@@ -212,88 +215,18 @@ function NetworkGraphic() {
   );
 }
 
-function ContactModal({ onClose }: { onClose: () => void }) {
-  const [submitted, setSubmitted] = useState(false);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[hsl(var(--primary)/.78)] p-4 backdrop-blur-sm"
-      role="presentation"
-      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
-    >
-      <div className="modal-in relative w-full max-w-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-6 shadow-2xl sm:p-9" role="dialog" aria-modal="true" aria-labelledby="contact-modal-title" data-testid="contact-modal">
-        <button type="button" onClick={onClose} className="icon-button absolute right-4 top-4" aria-label="Close logistics enquiry" data-testid="button-close-contact">
-          <X className="h-5 w-5" />
-        </button>
-        {!submitted ? (
-          <>
-            <p className="eyebrow">Start a logistics enquiry</p>
-            <h2 id="contact-modal-title" className="mt-4 max-w-sm font-display text-3xl font-bold leading-[1.06] text-[hsl(var(--foreground))]">Start a logistics enquiry.</h2>
-            <p className="mt-4 max-w-md text-sm leading-6 text-[hsl(var(--muted-foreground))]">
-              Share the route, cargo context and service need so the next logistics conversation starts with the right information.
-            </p>
-            <form className="mt-7 space-y-4" onSubmit={(event) => { event.preventDefault(); setSubmitted(true); }}>
-              <label className="block">
-                <span className="field-label">Your name</span>
-                <input required type="text" className="field-input" placeholder="Name" data-testid="input-contact-name" />
-              </label>
-              <label className="block">
-                <span className="field-label">Business email</span>
-                <input required type="email" className="field-input" placeholder="you@company.com" data-testid="input-contact-email" />
-              </label>
-              <label className="block">
-                <span className="field-label">Origin</span>
-                <input required type="text" className="field-input" placeholder="Where does it begin?" data-testid="input-contact-origin" />
-              </label>
-              <label className="block">
-                <span className="field-label">Destination</span>
-                <input required type="text" className="field-input" placeholder="Where does it need to go?" data-testid="input-contact-destination" />
-              </label>
-              <label className="block">
-                <span className="field-label">Cargo or service need</span>
-                <textarea required rows={3} className="field-input resize-none" placeholder="Cargo, fulfillment, documentation or visibility..." data-testid="input-contact-cargo" />
-              </label>
-              <label className="block">
-                <span className="field-label">Optional notes</span>
-                <textarea rows={2} className="field-input resize-none" placeholder="Timing, handling context or other route notes..." data-testid="input-contact-notes" />
-              </label>
-              <button type="submit" className="button-primary mt-3 flex w-full justify-between" data-testid="button-submit-contact">
-                Prepare enquiry
-                <ArrowUpRight className="h-4 w-4" />
-              </button>
-              <p className="font-mono-ui text-[0.58rem] uppercase tracking-[.1em] text-[hsl(var(--muted-foreground))]">Presentation flow only — nothing is sent yet.</p>
-            </form>
-          </>
-        ) : (
-          <div className="py-10 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[hsl(var(--accent)/.14)] text-[hsl(var(--accent))]">
-              <Check className="h-6 w-6" />
-            </div>
-            <h2 id="contact-modal-title" className="mt-6 font-display text-3xl font-bold text-[hsl(var(--foreground))]">Request prepared.</h2>
-            <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[hsl(var(--muted-foreground))]">
-              This is a presentation flow for now. Your details have not been sent; a live logistics enquiry service will be connected here later.
-            </p>
-            <button type="button" onClick={onClose} className="button-secondary mt-7" data-testid="button-close-confirmation">
-              Return to the page
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [contactOpen, setContactOpen] = useState(false);
+  const [enquiry, setEnquiry] = useState<EnquiryPreset | null>(null);
+  const contactOpen = enquiry !== null;
   const [headerScrolled, setHeaderScrolled] = useState(false);
   const [activeCapability, setActiveCapability] = useState<string | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const firstMenuItemRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
-    document.title = 'WORSTART SHIPPING';
-    const description = 'WORSTART SHIPPING helps businesses think clearly about freight, fulfillment, documentation and shipment movement across international routes.';
+    document.title = 'WORSTART GLOBAL | International Logistics, Import & Export';
+    const description = 'WORSTART GLOBAL connects businesses and individuals to international import and export, freight, vehicles, fulfillment, customs support, e-commerce, payments and visa assistance.';
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) {
       meta = document.createElement('meta');
@@ -310,7 +243,7 @@ function Home() {
       }
       tag.setAttribute('content', content);
     };
-    setOg('og:title', 'WORSTART SHIPPING');
+    setOg('og:title', 'WORSTART GLOBAL | International Logistics, Import & Export');
     setOg('og:description', description);
     setOg('og:type', 'website');
     const setNameMeta = (name: string, content: string) => {
@@ -322,8 +255,14 @@ function Home() {
       }
       tag.setAttribute('content', content);
     };
-    setNameMeta('twitter:title', 'WORSTART SHIPPING');
+    setNameMeta('twitter:title', 'WORSTART GLOBAL | International Logistics, Import & Export');
     setNameMeta('twitter:description', description);
+  }, []);
+
+  useEffect(() => {
+    const onOpen = (e: Event) => setEnquiry((e as CustomEvent<EnquiryPreset>).detail ?? {});
+    window.addEventListener(ENQUIRY_EVENT, onOpen);
+    return () => window.removeEventListener(ENQUIRY_EVENT, onOpen);
   }, []);
 
   useEffect(() => {
@@ -356,7 +295,7 @@ function Home() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       if (menuOpen) closeMenu();
-      if (contactOpen) setContactOpen(false);
+      if (contactOpen) setEnquiry(null);
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
@@ -392,7 +331,7 @@ function Home() {
   };
   const openContactFromMenu = () => {
     closeMenu();
-    setContactOpen(true);
+    openEnquiry();
   };
 
   return (
@@ -405,6 +344,7 @@ function Home() {
           <nav className="hidden items-center gap-7 md:flex" aria-label="Primary navigation">
             <a href="#top" className="nav-link" data-testid="link-overview">Overview</a>
             <a href="#capabilities" className="nav-link" data-testid="link-capabilities">Services</a>
+            <a href="#import-export" className="nav-link" data-testid="link-import-export">Import &amp; Export</a>
             <a href="#markets" className="nav-link" data-testid="link-markets">Network</a>
             <a href="#ecosystem" className="nav-link" data-testid="link-ecosystem">Ecosystem</a>
             <a href="#approach" className="nav-link" data-testid="link-approach">How it works</a>
@@ -427,6 +367,9 @@ function Home() {
             </a>
             <a href="#capabilities" onClick={closeMenu} className="mobile-nav-link" data-testid="mobile-link-capabilities">
               <span><small>02</small>Services</span><ArrowUpRight />
+            </a>
+            <a href="#import-export" onClick={closeMenu} className="mobile-nav-link" data-testid="mobile-link-import-export">
+              <span><small>02b</small>Import &amp; Export</span><ArrowUpRight />
             </a>
             <a href="#markets" onClick={closeMenu} className="mobile-nav-link" data-testid="mobile-link-markets">
               <span><small>03</small>Network</span><ArrowUpRight />
@@ -536,6 +479,11 @@ function Home() {
           </div>
         </section>
 
+        <ImportExportSection />
+        <CarsSection />
+        <LogisticsSection />
+        <TrackingSection />
+
         <section id="markets" className="relative overflow-hidden bg-[hsl(var(--primary))] py-20 text-[hsl(var(--primary-foreground))] md:py-28 lg:py-32">
           <div className="markets-orbit markets-orbit-large absolute right-[-10%] top-[-18%] h-[520px] w-[520px] rounded-full" />
           <div className="markets-orbit markets-orbit-small absolute right-[-3%] top-[-8%] h-[390px] w-[390px] rounded-full" />
@@ -606,6 +554,10 @@ function Home() {
             </div>
           </div>
         </section>
+
+        <EcosystemStatus />
+        <CommerceSection />
+        <VisaSection />
 
         <section id="approach" className="page-grid bg-[hsl(var(--secondary))] py-20 md:py-28 lg:py-32">
           <div className="container-wide">
@@ -747,8 +699,8 @@ function Home() {
                 <div>
                   <p className="eyebrow">Start a logistics enquiry</p>
                   <h2 className="mt-5 max-w-3xl font-display text-5xl font-bold leading-[.93] tracking-[-.06em] md:text-7xl">Move goods<br /><span className="text-[hsl(var(--accent))]">with clarity.</span></h2>
-                  <p className="mt-7 max-w-md text-sm leading-6 text-[hsl(var(--primary-foreground)/.66)]">Share your route, cargo context and service need. This presentation flow shows how the conversation starts; details are not sent yet.</p>
-                  <button type="button" onClick={() => setContactOpen(true)} className="button-cta-outline mt-7" data-testid="button-open-contact">
+                  <p className="mt-7 max-w-md text-sm leading-6 text-[hsl(var(--primary-foreground)/.66)]">Share your route, cargo context and service need. Requests are reviewed by our team and answered by email. No quote is generated automatically.</p>
+                  <button type="button" onClick={() => openEnquiry()} className="button-cta-outline mt-7" data-testid="button-open-contact">
                     Start a logistics enquiry <ArrowUpRight className="h-4 w-4" />
                   </button>
                 </div>
@@ -797,7 +749,7 @@ function Home() {
           </div>
         </div>
       </footer>
-      {contactOpen && <ContactModal onClose={() => setContactOpen(false)} />}
+      {enquiry && <EnquiryModal preset={enquiry} onClose={() => setEnquiry(null)} />}
     </div>
   );
 }
