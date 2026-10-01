@@ -201,6 +201,7 @@ export function CommerceSection() {
               {providers.map(([Icon, l]) => <li key={l} className="flex items-center gap-2 border border-[hsl(var(--border))] p-3"><Icon className="h-4 w-4 text-[hsl(var(--accent))]" />{l}</li>)}
             </ul>
             <p className="mt-4"><Soon>Payment provider not configured</Soon></p>
+            <a href="/shop" className="service-detail-toggle mt-4">Open the shop (demo catalogue) <ArrowUpRight className="h-3.5 w-3.5" /></a>
           </article>
         </div>
       </div>
@@ -260,7 +261,7 @@ export function VisaSection() {
         </div>
 
         <div id="appointments" className="mt-14 border border-[hsl(var(--border))] p-6 md:p-9">
-          <div className="flex items-center gap-3"><CalendarClock className="h-5 w-5 text-[hsl(var(--accent))]" strokeWidth={1.5} /><h3 className="font-display text-2xl font-bold">Request appointment assistance</h3></div>
+          <div className="flex items-center gap-3"><CalendarClock className="h-5 w-5 text-[hsl(var(--accent))]" strokeWidth={1.5} /><h3 className="font-display text-2xl font-bold">Request appointment assistance</h3><a href="/visa" className="service-detail-toggle ml-auto">Full visa experience <ArrowUpRight className="h-3.5 w-3.5" /></a></div>
           <p className="mt-3 text-sm text-[hsl(var(--muted-foreground))]">Appointment availability must be confirmed. Submitting this creates a request for our team, not a booking.</p>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <label><span className="field-label">Service</span><select className="field-input" value={service} onChange={(e) => setService(e.target.value)}>{svc.map((s) => <option key={s}>{s}</option>)}</select></label>

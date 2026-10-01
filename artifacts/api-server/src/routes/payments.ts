@@ -24,6 +24,11 @@ router.post("/payments/checkout", async (req, res) => {
   }
 });
 
+/** Status is read from stored, provider-verified records only. Storage is not connected yet. */
+router.get("/payments/:reference/status", (_req, res) => {
+  res.status(501).json({ error: "Payment records are not connected to a database yet, so no status can be reported." });
+});
+
 /** Status shown to users must come from the provider/webhook, never from the client. */
 router.post("/payments/webhooks/:provider", async (req, res) => {
   const provider = getProvider(req.params.provider);

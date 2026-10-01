@@ -21,6 +21,11 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
+import { Layout, BrandMark } from '@/components/site/layout';
+import Shop, { ProductDetail } from '@/pages/shop';
+import { Cart, Checkout, CheckoutStatus, Orders, Seller } from '@/pages/commerce';
+import { Visa, VisaRequest, Appointments } from '@/pages/visa';
+import Dashboard from '@/pages/dashboard';
 import { EnquiryModal } from '@/components/site/enquiry';
 import { ImportExportSection, CarsSection, LogisticsSection, TrackingSection, CommerceSection, VisaSection, EcosystemStatus } from '@/components/site/sections';
 import { ENQUIRY_EVENT, openEnquiry, type EnquiryPreset } from '@/lib/config';
@@ -145,20 +150,6 @@ const coordinationItems = [
   'Milestone visibility',
   'Partner and carrier confirmation',
 ];
-
-function BrandMark({ light = false }: { light?: boolean }) {
-  return (
-    <span className="brand-mark" data-testid="brand-mark">
-      <span className={`brand-symbol ${light ? 'brand-symbol-light' : ''}`} aria-hidden="true">
-        <span className="brand-symbol-diamond" />
-        <span className="brand-symbol-dot" />
-      </span>
-      <span className={`brand-name ${light ? 'brand-name-light' : ''}`}>
-        WORSTART<span> SHIPPING</span>
-      </span>
-    </span>
-  );
-}
 
 function NetworkGraphic() {
   const positions = [
@@ -335,64 +326,9 @@ function Home() {
   };
 
   return (
-    <div className="site-shell grain">
-      <header className={`site-header ${headerScrolled ? 'site-header-scrolled' : ''}`}>
-        <div className="container-wide header-bar flex h-[76px] items-center justify-between">
-              <a href="#top" aria-label="WORSTART SHIPPING home" data-testid="link-home">
-            <BrandMark />
-          </a>
-          <nav className="hidden items-center gap-7 md:flex" aria-label="Primary navigation">
-            <a href="#top" className="nav-link" data-testid="link-overview">Overview</a>
-            <a href="#capabilities" className="nav-link" data-testid="link-capabilities">Services</a>
-            <a href="#import-export" className="nav-link" data-testid="link-import-export">Import &amp; Export</a>
-            <a href="#markets" className="nav-link" data-testid="link-markets">Network</a>
-            <a href="#ecosystem" className="nav-link" data-testid="link-ecosystem">Ecosystem</a>
-            <a href="#approach" className="nav-link" data-testid="link-approach">How it works</a>
-            <a href="#contact" className="button-nav group" data-testid="link-header-contact">
-              Start a logistics enquiry <ArrowUpRight className="h-3.5 w-3.5 text-[hsl(var(--accent))]" />
-            </a>
-          </nav>
-          <button ref={menuButtonRef} type="button" className="menu-toggle inline-flex items-center justify-center md:hidden" onClick={toggleMenu} aria-expanded={menuOpen} aria-controls="mobile-navigation" aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'} data-testid="button-mobile-menu">
-            {menuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </div>
-        <div className={`mobile-panel ${menuOpen ? 'mobile-panel-open' : ''}`} aria-hidden={!menuOpen}>
-          <nav id="mobile-navigation" className="mobile-navigation" aria-label="Mobile navigation">
-            <div className="mobile-navigation-intro">
-              <span className="eyebrow">WORSTART / shipping</span>
-              <span className="font-mono-ui text-[0.62rem] uppercase tracking-[.12em] text-[hsl(var(--muted-foreground))]">Logistics network</span>
-            </div>
-            <a ref={firstMenuItemRef} href="#top" onClick={closeMenu} className="mobile-nav-link" data-testid="mobile-link-overview">
-              <span><small>01</small>Overview</span><ArrowUpRight />
-            </a>
-            <a href="#capabilities" onClick={closeMenu} className="mobile-nav-link" data-testid="mobile-link-capabilities">
-              <span><small>02</small>Services</span><ArrowUpRight />
-            </a>
-            <a href="#import-export" onClick={closeMenu} className="mobile-nav-link" data-testid="mobile-link-import-export">
-              <span><small>02b</small>Import &amp; Export</span><ArrowUpRight />
-            </a>
-            <a href="#markets" onClick={closeMenu} className="mobile-nav-link" data-testid="mobile-link-markets">
-              <span><small>03</small>Network</span><ArrowUpRight />
-            </a>
-            <a href="#ecosystem" onClick={closeMenu} className="mobile-nav-link" data-testid="mobile-link-ecosystem">
-              <span><small>04</small>Ecosystem</span><ArrowUpRight />
-            </a>
-            <a href="#approach" onClick={closeMenu} className="mobile-nav-link" data-testid="mobile-link-approach">
-              <span><small>05</small>How it works</span><ArrowUpRight />
-            </a>
-            <button type="button" onClick={openContactFromMenu} className="mobile-nav-cta" data-testid="mobile-link-contact">
-              <span>Start a logistics enquiry</span><ArrowUpRight />
-            </button>
-            <div className="mobile-navigation-footer">
-              <span>Six lanes</span>
-              <span className="h-px flex-1 bg-[hsl(var(--border))]" />
-              <span>One route forward</span>
-            </div>
-          </nav>
-        </div>
-      </header>
+    <Layout>
 
-      <main id="top">
+      <div id="top">
         <section className="page-grid hero-section relative flex items-center overflow-hidden border-b border-[hsl(var(--border))]">
           <div className="container-wide relative z-10 grid w-full items-center gap-8 lg:grid-cols-[1.03fr_.97fr] lg:gap-5">
             <div className="hero-copy max-w-[680px]">
@@ -402,7 +338,7 @@ function Home() {
               </div>
               <h1 className="fade-up delay-1 mt-7 max-w-[14ch] text-balance font-display font-bold leading-[.89] tracking-[-.065em] text-[hsl(var(--foreground))]">
                  <span className="block">Goods move.</span>
-                 <span className="hero-title-accent block text-[hsl(var(--accent))]">We make the route clear.</span>
+                 <span className="hero-title-accent block text-[hsl(var(--accent))]">We make the route.</span>
               </h1>
               <p className="fade-up delay-2 mt-7 max-w-[510px] text-[1.02rem] leading-7 text-[hsl(var(--muted-foreground))]">
                   WORSTART SHIPPING brings route clarity to freight, fulfillment, documentation and shipment visibility across the markets your business depends on.
@@ -717,40 +653,10 @@ function Home() {
             </div>
           </div>
         </section>
-      </main>
+      </div>
 
-      <footer className="bg-[hsl(var(--primary))] py-12 text-[hsl(var(--primary-foreground))]">
-        <div className="container-wide">
-          <div className="flex flex-col justify-between gap-10 border-b border-[hsl(var(--primary-foreground)/.18)] pb-10 md:flex-row md:items-start">
-            <div>
-              <a href="#top" aria-label="Back to WORSTART SHIPPING home" data-testid="link-footer-home"><BrandMark light /></a>
-              <p className="mt-5 max-w-xs text-sm leading-6 text-[hsl(var(--primary-foreground)/.55)]">Route clarity, freight coordination and visibility between confirmed handoffs.</p>
-            </div>
-            <div className="grid grid-cols-2 gap-x-14 gap-y-4 sm:grid-cols-4">
-              <a href="#top" className="footer-link" data-testid="link-footer-overview">Overview</a>
-              <a href="#capabilities" className="footer-link" data-testid="link-footer-capabilities">Services</a>
-              <a href="#markets" className="footer-link" data-testid="link-footer-markets">Network</a>
-              <a href="#ecosystem" className="footer-link" data-testid="link-footer-ecosystem">Ecosystem</a>
-              <a href="#approach" className="footer-link" data-testid="link-footer-approach">How it works</a>
-              <a href="#contact" className="footer-link" data-testid="link-footer-contact">Enquiry</a>
-              <a href="#legal-notice" className="footer-link" data-testid="link-footer-privacy">Privacy</a>
-              <a href="#legal-notice" className="footer-link" data-testid="link-footer-terms">Terms</a>
-            </div>
-          </div>
-          <div className="footer-ecosystem flex flex-col gap-3 border-b border-[hsl(var(--primary-foreground)/.18)] py-6 font-mono-ui text-[0.58rem] uppercase tracking-[.12em] text-[hsl(var(--primary-foreground)/.42)] sm:flex-row sm:items-center sm:gap-5">
-            <span className="text-[hsl(var(--accent))]">Ecosystem labels</span>
-            <span>Bank Online</span><i>·</i><span>DZ Seller</span><i>·</i><span>Car Leasing &amp; Booking</span><i>·</i><span>Future Maritime</span>
-          </div>
-          <p id="legal-notice" className="pt-6 text-xs leading-5 text-[hsl(var(--primary-foreground)/.38)]">Privacy and terms details are to be confirmed before launch.</p>
-          <div className="flex flex-col justify-between gap-3 pt-6 font-mono-ui text-[0.57rem] uppercase tracking-[.12em] text-[hsl(var(--primary-foreground)/.38)] sm:flex-row">
-            <span>WORSTART SHIPPING</span>
-            <span>Operational details to be confirmed</span>
-            <span>Move goods with clarity</span>
-          </div>
-        </div>
-      </footer>
       {enquiry && <EnquiryModal preset={enquiry} onClose={() => setEnquiry(null)} />}
-    </div>
+    </Layout>
   );
 }
 
@@ -759,6 +665,19 @@ function Router() {
     <RoutedErrorBoundary>
       <Switch>
         <WouterRoute path="/" component={Home} />
+        <WouterRoute path="/shop" component={Shop} />
+        <WouterRoute path="/products" component={Shop} />
+        <WouterRoute path="/product/:id" component={ProductDetail} />
+        <WouterRoute path="/cart" component={Cart} />
+        <WouterRoute path="/checkout" component={Checkout} />
+        <WouterRoute path="/checkout/status" component={CheckoutStatus} />
+        <WouterRoute path="/orders" component={Orders} />
+        <WouterRoute path="/seller" component={Seller} />
+        <WouterRoute path="/visa" component={Visa} />
+        <WouterRoute path="/visa/request" component={VisaRequest} />
+        <WouterRoute path="/appointments" component={Appointments} />
+        <WouterRoute path="/dashboard" component={() => <Dashboard />} />
+        <WouterRoute path="/dashboard/:area">{(p) => <Dashboard area={p.area} />}</WouterRoute>
         <WouterRoute component={NotFound} />
       </Switch>
     </RoutedErrorBoundary>
