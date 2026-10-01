@@ -70,10 +70,10 @@ export function EnquiryModal({ preset, onClose }: { preset: EnquiryPreset; onClo
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[hsl(var(--primary)/.78)] p-4 backdrop-blur-sm sm:items-center"
+    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-[hsl(var(--primary)/.78)] p-4 backdrop-blur-sm"
       role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}
       onKeyDown={(e) => e.key === 'Escape' && onClose()}>
-      <div className="modal-in relative my-6 w-full max-w-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-6 shadow-2xl sm:p-9"
+      <div className="modal-in relative m-auto w-full max-w-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-6 shadow-2xl sm:p-9"
         role="dialog" aria-modal="true" aria-labelledby="enquiry-title" data-testid="contact-modal">
         <button type="button" onClick={onClose} className="icon-button absolute right-4 top-4" aria-label="Close enquiry" data-testid="button-close-contact"><X className="h-5 w-5" /></button>
 
