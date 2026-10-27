@@ -44,39 +44,40 @@
 }
 
 :root {
-  --background: 38 43% 94%;
-  --foreground: 215 35% 15%;
-  --border: 215 18% 79%;
-  --input: 215 18% 79%;
-  --ring: 16 82% 52%;
-  --card: 38 43% 96%;
-  --card-foreground: 215 35% 15%;
-  --card-border: 215 18% 79%;
-  --popover: 38 43% 96%;
-  --popover-foreground: 215 35% 15%;
-  --popover-border: 215 18% 79%;
-  --primary: 215 35% 15%;
-  --primary-foreground: 38 43% 94%;
-  --secondary: 28 50% 87%;
-  --secondary-foreground: 215 35% 15%;
-  --muted: 34 26% 87%;
-  --muted-foreground: 215 13% 42%;
-  --accent: 16 82% 52%;
-  --accent-foreground: 38 43% 96%;
-  --destructive: 0 66% 48%;
-  --destructive-foreground: 38 43% 96%;
-  --sidebar: 215 35% 15%;
-  --sidebar-foreground: 38 43% 94%;
-  --sidebar-border: 215 26% 28%;
-  --sidebar-primary: 16 82% 52%;
-  --sidebar-primary-foreground: 38 43% 96%;
-  --sidebar-accent: 208 35% 28%;
-  --sidebar-accent-foreground: 38 43% 94%;
+  color-scheme: dark;
+  --background: 225 14% 6%;
+  --foreground: 40 20% 96%;
+  --border: 225 8% 20%;
+  --input: 225 8% 20%;
+  --ring: 16 85% 56%;
+  --card: 225 12% 9%;
+  --card-foreground: 40 20% 96%;
+  --card-border: 225 8% 20%;
+  --popover: 225 12% 9%;
+  --popover-foreground: 40 20% 96%;
+  --popover-border: 225 8% 20%;
+  --primary: 225 14% 10%;
+  --primary-foreground: 40 20% 96%;
+  --secondary: 225 12% 9%;
+  --secondary-foreground: 40 20% 96%;
+  --muted: 225 10% 14%;
+  --muted-foreground: 225 8% 66%;
+  --accent: 16 85% 56%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 72% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --sidebar: 225 14% 8%;
+  --sidebar-foreground: 40 20% 96%;
+  --sidebar-border: 225 8% 20%;
+  --sidebar-primary: 16 85% 56%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 225 10% 14%;
+  --sidebar-accent-foreground: 40 20% 96%;
   --app-font-sans: 'DM Sans', sans-serif;
   --app-font-serif: Georgia, serif;
   --app-font-mono: 'IBM Plex Mono', monospace;
   --radius: 0.5rem;
-  --shadow-soft: 0 18px 45px rgba(30, 48, 68, 0.1);
+  --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.45);
 }
 
 .dark {
@@ -402,4 +403,26 @@
   .brand-symbol { width: 2.25rem; height: 2.25rem; }
   .hero-section h1 { font-size: 2.72rem; }
   .network-status { font-size: .41rem; }
+}
+
+/* ---- Premium layer: glass, glow, motion ---- */
+.glass { background: hsl(var(--foreground) / .04); border: 1px solid hsl(var(--foreground) / .1); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: inset 0 1px 0 hsl(var(--foreground) / .06); }
+.site-header { background: hsl(var(--background) / .55); -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%); border-bottom: 1px solid hsl(var(--foreground) / .06); }
+.site-header-scrolled { background: hsl(var(--background) / .8); box-shadow: 0 12px 40px rgba(0,0,0,.45); }
+.hero-section { background: radial-gradient(60% 55% at 78% 40%, hsl(var(--accent) / .16), transparent 70%), radial-gradient(40% 40% at 10% 90%, hsl(210 80% 50% / .08), transparent 70%), hsl(var(--background)); }
+.service-card, .market-card, .ecosystem-card, .principle-card { transition: border-color .25s ease, transform .25s ease, background-color .25s ease; }
+.service-card:hover, .ecosystem-card:hover { border-color: hsl(var(--accent) / .6); transform: translateY(-3px); }
+.card-ds { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); transition: border-color .25s ease, transform .25s ease; }
+a.card-ds:hover, .card-ds-hover:hover { border-color: hsl(var(--accent) / .6); transform: translateY(-3px); }
+.field-input option { background: hsl(var(--card)); color: hsl(var(--foreground)); }
+.page-shell { padding-top: 8.5rem; padding-bottom: 6rem; min-height: 70dvh; }
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+@keyframes route-flow { to { stroke-dashoffset: -60; } }
+.route-flow { stroke-dasharray: 4 8; animation: route-flow 2.2s linear infinite; }
+@keyframes pulse-node { 0%,100% { opacity: .55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.18); } }
+.pulse-node { animation: pulse-node 2.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@media (prefers-reduced-motion: reduce) {
+  .route-flow, .pulse-node { animation: none; }
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
