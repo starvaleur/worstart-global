@@ -4,7 +4,7 @@ import { config, enquiryConfigured, type EnquiryPreset } from '@/lib/config';
 
 export const SERVICES = [
   'Import goods', 'Export goods', 'Import a car', 'Export a car', 'Commercial cargo', 'Personal cargo',
-  'Fulfillment & warehousing', 'Customs & documentation', 'E-commerce / DZ Seller', 'Vehicle leasing / booking',
+  'Fulfillment & warehousing', 'Customs & documentation', 'E-commerce / DZ Seller', 'Vehicle leasing / booking', 'Vehicle sourcing request', 'Machinery sourcing enquiry', 'Automotive parts request',
   'Visa assistance', 'Visa appointment assistance', 'Other',
 ];
 

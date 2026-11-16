@@ -22,18 +22,20 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { Layout, BrandMark } from '@/components/site/layout';
-import Shop, { ProductDetail } from '@/pages/shop';
-import { Cart, Checkout, CheckoutStatus, Orders, Seller } from '@/pages/commerce';
+import Shop, { Orders, Seller } from '@/pages/store';
 import { Visa, VisaRequest, Appointments } from '@/pages/visa';
 import Dashboard from '@/pages/dashboard';
+import Services from '@/pages/services';
+import { Photo, TrustedBy, hasPhoto } from '@/components/site/media';
 import { EnquiryModal } from '@/components/site/enquiry';
-import { ImportExportSection, CarsSection, LogisticsSection, TrackingSection, CommerceSection, VisaSection, EcosystemStatus } from '@/components/site/sections';
+import { ServiceFeatures, StoreSection, LimitsSection } from '@/components/site/sections';
 import { ENQUIRY_EVENT, openEnquiry, type EnquiryPreset } from '@/lib/config';
 import {
   Route as WouterRoute,
   Switch,
   useLocation,
   Router as WouterRouter,
+  Redirect,
 } from 'wouter';
 
 const queryClient = new QueryClient();
@@ -151,67 +153,11 @@ const coordinationItems = [
   'Partner and carrier confirmation',
 ];
 
-function NetworkGraphic() {
-  const positions = [
-    'left-[12%] top-[38%]',
-    'left-[49%] top-[16%]',
-    'right-[8%] top-[28%]',
-    'left-[30%] bottom-[25%]',
-    'right-[20%] bottom-[12%]',
-    'left-[10%] bottom-[8%]',
-  ];
-
-  return (
-    <div
-      className="network-graphic relative mx-auto aspect-square w-full max-w-[480px]"
-      role="img"
-      aria-label="Abstract network of WORSTART SHIPPING lanes"
-    >
-      <div className="network-ring network-ring-outer absolute inset-[7%] rounded-full" />
-      <div className="network-ring network-ring-mid absolute inset-[21%] rounded-full" />
-      <div className="network-ring network-ring-inner absolute inset-[36%] rounded-full" />
-      <div className="hero-orbit absolute inset-[3%] rounded-[50%]" />
-      <div className="hero-orbit-slow absolute inset-[14%] rounded-[50%]" />
-      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 500 500" fill="none" aria-hidden="true">
-        <path d="M93 335C138 248 161 134 263 120C336 110 356 184 421 173" stroke="hsl(var(--accent) / .8)" strokeWidth="1.5" className="route-dash" />
-        <path d="M78 193C177 197 211 311 308 358C358 382 385 315 433 277" stroke="hsl(var(--foreground) / .38)" strokeWidth="1.2" className="route-dash" />
-        <path d="M145 419C181 355 208 276 179 197C165 157 133 141 109 100" stroke="hsl(var(--foreground) / .25)" strokeWidth="1.2" className="route-dash" />
-        <path d="M261 120C281 207 326 254 421 173" stroke="hsl(var(--accent) / .35)" strokeWidth="1" />
-        <path d="M179 197C245 189 278 195 308 358" stroke="hsl(var(--foreground) / .22)" strokeWidth="1" />
-      </svg>
-      {markets.map((market, index) => (
-        <div
-          className={`network-node absolute ${positions[index]} group`}
-          key={market.code}
-          data-testid={`market-node-${market.code}`}
-        >
-          <div className="network-node-dot relative flex items-center justify-center rounded-full border border-[hsl(var(--accent))] bg-[hsl(var(--background))] font-mono-ui font-medium text-[hsl(var(--foreground))] shadow-[0_0_0_7px_hsl(var(--background)/.72)] transition-transform duration-300 group-hover:scale-110">
-            {market.code}
-            <span className="absolute inset-1.5 rounded-full border border-[hsl(var(--accent)/.25)]" />
-          </div>
-          <span className="market-name absolute left-1/2 top-full mt-2 -translate-x-1/2 font-mono-ui uppercase text-[hsl(var(--muted-foreground))]">
-            {market.name}
-          </span>
-        </div>
-      ))}
-      <div className="network-core absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full bg-[hsl(var(--primary))] text-center text-[hsl(var(--primary-foreground))] shadow-[0_16px_38px_rgba(30,48,68,.2)]">
-        <span className="font-display text-2xl font-bold leading-none">W</span>
-        <span className="mt-2 font-mono-ui text-[0.53rem] uppercase tracking-[.14em] text-[hsl(var(--primary-foreground)/.7)]">shipping link</span>
-      </div>
-      <div className="network-status absolute flex items-center gap-2 bg-[hsl(var(--accent))] font-mono-ui uppercase text-[hsl(var(--accent-foreground))]">
-        <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--accent-foreground))]" />
-        Illustrative network
-      </div>
-    </div>
-  );
-}
-
 function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [enquiry, setEnquiry] = useState<EnquiryPreset | null>(null);
   const contactOpen = enquiry !== null;
   const [headerScrolled, setHeaderScrolled] = useState(false);
-  const [activeCapability, setActiveCapability] = useState<string | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const firstMenuItemRef = useRef<HTMLAnchorElement>(null);
 
@@ -329,96 +275,29 @@ function Home() {
     <Layout>
 
       <div id="top">
-        <section className="page-grid hero-section relative flex items-center overflow-hidden border-b border-[hsl(var(--border))]">
-          <div className="container-wide relative z-10 grid w-full items-center gap-8 lg:grid-cols-[1.03fr_.97fr] lg:gap-5">
-            <div className="hero-copy max-w-[680px]">
-              <div className="fade-up flex items-center gap-3">
-                <span className="h-px w-10 bg-[hsl(var(--accent))]" />
-                  <p className="eyebrow">International freight &amp; logistics</p>
-              </div>
-              <h1 className="fade-up delay-1 mt-7 max-w-[14ch] text-balance font-display font-bold leading-[.89] tracking-[-.065em] text-[hsl(var(--foreground))]">
-                 <span className="block">Goods move.</span>
-                 <span className="hero-title-accent block text-[hsl(var(--accent))]">We make the route.</span>
-              </h1>
-              <p className="fade-up delay-2 mt-7 max-w-[510px] text-[1.02rem] leading-7 text-[hsl(var(--muted-foreground))]">
-                  WORSTART SHIPPING brings route clarity to freight, fulfillment, documentation and shipment visibility across the markets your business depends on.
-              </p>
-              <div className="fade-up delay-3 mt-8 flex flex-col items-stretch gap-4 sm:flex-row sm:items-center">
-                <a href="#contact" className="button-primary group" data-testid="link-hero-contact">
-                   Start a logistics enquiry
-                  <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                </a>
-                <a href="#markets" className="link-arrow inline-flex min-h-12 items-center gap-3 text-sm font-semibold text-[hsl(var(--foreground))]" data-testid="link-hero-markets">
-                   Explore our lanes <ArrowRight className="h-4 w-4 text-[hsl(var(--accent))]" />
-                </a>
+        <section className="hero-section">
+          <div className="container-wide grid items-center gap-12 lg:grid-cols-[1.1fr_.9fr] lg:gap-16">
+            <div className="hero-copy">
+              <p className="eyebrow">International freight &amp; logistics</p>
+              <h1 className="mt-5 text-balance font-display">Goods move. We make the route.</h1>
+              <p className="mt-6">WORSTART GLOBAL coordinates freight, import and export, vehicles, fulfillment and customs support across the markets your business depends on.</p>
+              <div className="mt-9 flex flex-col items-stretch gap-4 sm:flex-row sm:items-center">
+                <button type="button" onClick={() => openEnquiry()} className="button-primary" data-testid="link-hero-contact">Get a quote <ArrowUpRight className="h-4 w-4" /></button>
+                <a href="/services" className="button-secondary" data-testid="link-hero-markets">Explore services</a>
               </div>
             </div>
-            <div className="fade-up delay-2 hero-graphic-wrap flex w-full justify-center lg:justify-end">
-              <NetworkGraphic />
-            </div>
-          </div>
-          <div className="absolute bottom-5 left-5 hidden items-center gap-3 md:flex">
-            <span className="font-mono-ui text-[0.57rem] uppercase tracking-[.14em] text-[hsl(var(--muted-foreground))]">Scroll to navigate</span>
-            <ChevronDown className="h-4 w-4 animate-bounce text-[hsl(var(--accent))]" />
-          </div>
-          <span className="absolute right-5 top-1/2 hidden -rotate-90 font-mono-ui text-[0.57rem] uppercase tracking-[.2em] text-[hsl(var(--muted-foreground))] lg:block">WS / 001</span>
-        </section>
-
-        <section className="ecosystem-strip border-b border-[hsl(var(--border))] bg-[hsl(var(--background))]">
-          <div className="container-wide flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:gap-8">
-            <span className="font-mono-ui text-[0.6rem] uppercase tracking-[.16em] text-[hsl(var(--accent))]">Connected by WORSTART</span>
-            <div className="ecosystem-marquee" aria-label="WORSTART ecosystem labels">
-              <div className="ecosystem-marquee-track">
-                <span>Bank Online</span><i>·</i><span>DZ Seller</span><i>·</i><span>Car Leasing &amp; Booking</span><i>·</i><span>Future Maritime</span>
-                <span aria-hidden="true">Bank Online</span><i aria-hidden="true">·</i><span aria-hidden="true">DZ Seller</span><i aria-hidden="true">·</i><span aria-hidden="true">Car Leasing &amp; Booking</span><i aria-hidden="true">·</i><span aria-hidden="true">Future Maritime</span>
+            {hasPhoto('hero') ? <Photo id="hero" priority className="aspect-[4/5]" /> : (
+              <div aria-label="Markets served">
+                <p className="text-base font-semibold text-[hsl(var(--foreground))]">Markets served</p>
+                <ul className="mt-3 border-t border-[hsl(var(--border))]">{['Algeria', 'China', 'Europe', 'Türkiye', 'UAE', 'USA'].map((m) => <li key={m} className="border-b border-[hsl(var(--border))] py-3 text-3xl font-bold tracking-[-.02em] text-[hsl(var(--foreground))] md:text-4xl">{m}</li>)}</ul>
               </div>
-            </div>
+            )}
           </div>
         </section>
 
-        <section id="capabilities" className="bg-[hsl(var(--background))] py-20 md:py-28 lg:py-32">
-          <div className="container-wide">
-            <div className="section-heading grid gap-8 lg:grid-cols-[.75fr_1.25fr]">
-              <div>
-                <p className="eyebrow">Services / built around the handoff</p>
-                <h2 className="mt-5 max-w-md font-display text-4xl font-bold leading-[1.02] tracking-[-.04em] text-[hsl(var(--foreground))] md:text-5xl">The work between origin and arrival.</h2>
-              </div>
-              <div className="max-w-xl lg:pt-10">
-                <p className="text-lg leading-8 text-[hsl(var(--muted-foreground))]">A logistics route is more than distance. It is the information, people, documents and next handoffs that make movement easier to understand.</p>
-              </div>
-            </div>
-            <div className="capability-grid mt-14 md:mt-16">
-              {capabilities.map((capability) => {
-                const Icon = capability.icon;
-                const expanded = activeCapability === capability.number;
-                return (
-                  <article key={capability.number} className={`service-card ${expanded ? 'service-card-expanded' : ''}`} data-testid={`card-capability-${capability.number}`}>
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono-ui text-xs text-[hsl(var(--accent))]" data-testid={`text-capability-number-${capability.number}`}>{capability.number}</span>
-                      <span className="service-icon flex h-10 w-10 items-center justify-center border border-[hsl(var(--border))] text-[hsl(var(--foreground)/.65)]">
-                        <Icon className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
-                      </span>
-                    </div>
-                    <h3 className="mt-8 font-display text-2xl font-bold tracking-[-.03em] text-[hsl(var(--foreground))]" data-testid={`text-capability-title-${capability.number}`}>{capability.title}</h3>
-                    <p className="mt-4 text-sm leading-6 text-[hsl(var(--muted-foreground))]">{capability.body}</p>
-                    <ul className="service-bullets mt-6 space-y-3">
-                      {capability.bullets.map((bullet) => <li key={bullet}><span />{bullet}</li>)}
-                    </ul>
-                    <button type="button" className="service-detail-toggle mt-7" onClick={() => setActiveCapability(expanded ? null : capability.number)} aria-expanded={expanded}>
-                      {expanded ? 'Close detail' : 'Learn more'} <ArrowUpRight className="h-3.5 w-3.5" />
-                    </button>
-                    {expanded && <p className="service-detail mt-4 border-t border-[hsl(var(--border))] pt-4 text-xs leading-5 text-[hsl(var(--muted-foreground))]">This is an intended operating model. Specific partner, carrier and service details are confirmed for each movement.</p>}
-                  </article>
-                );
-              })}
-            </div>
-          </div>
-        </section>
+        <TrustedBy />
 
-        <ImportExportSection />
-        <CarsSection />
-        <LogisticsSection />
-        <TrackingSection />
+        <ServiceFeatures />
 
         <section id="markets" className="relative overflow-hidden bg-[hsl(var(--primary))] py-20 text-[hsl(var(--primary-foreground))] md:py-28 lg:py-32">
           <div className="markets-orbit markets-orbit-large absolute right-[-10%] top-[-18%] h-[520px] w-[520px] rounded-full" />
@@ -491,9 +370,8 @@ function Home() {
           </div>
         </section>
 
-        <EcosystemStatus />
-        <CommerceSection />
-        <VisaSection />
+        <StoreSection />
+        <LimitsSection />
 
         <section id="approach" className="page-grid bg-[hsl(var(--secondary))] py-20 md:py-28 lg:py-32">
           <div className="container-wide">
@@ -527,45 +405,10 @@ function Home() {
           </div>
         </section>
 
-        <section className="bg-[hsl(var(--primary))] py-20 text-[hsl(var(--primary-foreground))] md:py-24">
-          <div className="container-wide">
-            <div className="flex flex-col justify-between gap-8 md:flex-row md:items-end">
-              <div>
-                <p className="eyebrow">Operating principles</p>
-                <h2 className="mt-5 max-w-2xl font-display text-4xl font-bold leading-[.98] tracking-[-.05em] md:text-6xl">The standards behind a clearer move.</h2>
-              </div>
-              <p className="max-w-xs text-sm leading-6 text-[hsl(var(--primary-foreground)/.62)]">Principles, not performance claims. The details of each movement still need to be confirmed.</p>
-            </div>
-            <div className="principles-grid mt-14 border-t border-[hsl(var(--primary-foreground)/.18)]">
-              {principles.map((principle) => (
-                <article key={principle.number} className="principle-card">
-                  <span className="font-mono-ui text-xs text-[hsl(var(--accent))]">{principle.number}</span>
-                  <h3 className="mt-8 font-display text-2xl font-bold tracking-[-.03em]">{principle.title}</h3>
-                  <p className="mt-4 text-sm leading-6 text-[hsl(var(--primary-foreground)/.62)]">{principle.body}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
         <section className="bg-[hsl(var(--background))] py-20 md:py-28 lg:py-32">
           <div className="container-wide">
-            <div className="grid gap-10 lg:grid-cols-[.9fr_1.1fr] lg:items-center lg:gap-24">
-              <div className="coordinate-visual page-grid relative min-h-[360px] overflow-hidden border border-[hsl(var(--border))] p-7 md:min-h-[420px] md:p-10">
-                <div className="coordinate-orbit coordinate-orbit-one" />
-                <div className="coordinate-orbit coordinate-orbit-two" />
-                <div className="coordinate-route route-route-one" />
-                <div className="coordinate-route route-route-two" />
-                <div className="coordinate-center">
-                  <span className="font-mono-ui text-[0.55rem] uppercase tracking-[.15em]">W / coordination</span>
-                  <strong className="mt-3 font-display text-3xl">Next<br />handoff</strong>
-                </div>
-                <span className="coordinate-chip coordinate-chip-origin">Origin context</span>
-                <span className="coordinate-chip coordinate-chip-docs">Documents</span>
-                <span className="coordinate-chip coordinate-chip-destination">Destination</span>
-                <span className="absolute bottom-6 left-7 font-mono-ui text-[0.58rem] uppercase tracking-[.14em] text-[hsl(var(--muted-foreground))] md:left-10">Illustrative coordination view</span>
-              </div>
-              <div>
+            <div className="grid gap-10">
+              <div className="max-w-3xl">
                 <p className="eyebrow">What we coordinate</p>
                 <h2 className="mt-5 max-w-xl font-display text-4xl font-bold leading-[.98] tracking-[-.05em] text-[hsl(var(--foreground))] md:text-6xl">Less ambiguity between one move and the next.</h2>
                 <p className="mt-7 max-w-xl text-lg leading-8 text-[hsl(var(--muted-foreground))]">The logistics layer is where cargo context, documents, service need and partner confirmation meet. We keep that conversation structured.</p>
@@ -575,36 +418,6 @@ function Home() {
                   ))}
                 </div>
                 <a href="#contact" className="button-secondary mt-8">Start with route context <ArrowUpRight className="h-4 w-4" /></a>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="bg-[hsl(var(--secondary))] py-20 md:py-28 lg:py-32">
-          <div className="container-wide">
-            <div className="grid gap-10 lg:grid-cols-[.72fr_1.28fr] lg:items-end lg:gap-24">
-              <div>
-                <p className="eyebrow">Example shipment view / non-live</p>
-                <h2 className="mt-5 max-w-lg font-display text-4xl font-bold leading-[.98] tracking-[-.05em] text-[hsl(var(--foreground))] md:text-6xl">A clearer view of what matters next.</h2>
-                <p className="mt-7 max-w-md text-sm leading-6 text-[hsl(var(--muted-foreground))]">An illustrative workflow panel showing the information a route conversation should keep in view. It is not connected to a shipment or backend.</p>
-              </div>
-              <div className="shipment-panel rounded-[1.75rem] bg-[hsl(var(--background))] p-5 shadow-[0_20px_70px_rgba(30,48,68,.1)] md:p-8">
-                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[hsl(var(--border))] pb-5">
-                  <div><span className="field-label">Illustrative workflow</span><h3 className="mt-2 font-display text-2xl font-bold text-[hsl(var(--foreground))]">Route context / sample</h3></div>
-                  <span className="workflow-badge"><span />Not live</span>
-                </div>
-                <div className="shipment-route-bar mt-6">
-                  <div><span className="field-label">Origin</span><strong>Algeria</strong></div>
-                  <div className="shipment-route-line"><span /><span /><span /></div>
-                  <div className="text-right"><span className="field-label">Destination</span><strong>European Union</strong></div>
-                </div>
-                <div className="shipment-detail-grid mt-8">
-                  <div><span className="field-label">Cargo / service need</span><strong>Example cargo context</strong></div>
-                  <div><span className="field-label">Current stage</span><strong>Route brief</strong></div>
-                  <div><span className="field-label">Documents</span><strong><Check className="mr-2 inline h-4 w-4 text-[hsl(var(--accent))]" />Information to review</strong></div>
-                  <div><span className="field-label">Next handoff</span><strong>Confirmation required</strong></div>
-                </div>
-                <div className="mt-8 border-t border-[hsl(var(--border))] pt-5 text-xs leading-5 text-[hsl(var(--muted-foreground))]">Sample content only. A real movement would be shaped around confirmed cargo, documents, route and partner details.</div>
               </div>
             </div>
           </div>
@@ -640,22 +453,12 @@ function Home() {
                     Start a logistics enquiry <ArrowUpRight className="h-4 w-4" />
                   </button>
                 </div>
-                <div className="contact-route-visual" aria-hidden="true">
-                  <div className="contact-route-grid" />
-                  <div className="contact-route-line contact-route-line-one" />
-                  <div className="contact-route-line contact-route-line-two" />
-                  <span className="contact-route-node contact-route-node-one">DZ</span>
-                  <span className="contact-route-node contact-route-node-two">EU</span>
-                  <span className="contact-route-node contact-route-node-three">CN</span>
-                  <div className="contact-route-core"><span>W</span><small>next move</small></div>
-                </div>
               </div>
             </div>
           </div>
         </section>
       </div>
 
-      {enquiry && <EnquiryModal preset={enquiry} onClose={() => setEnquiry(null)} />}
     </Layout>
   );
 }
@@ -666,11 +469,11 @@ function Router() {
       <Switch>
         <WouterRoute path="/" component={Home} />
         <WouterRoute path="/shop" component={Shop} />
-        <WouterRoute path="/products" component={Shop} />
-        <WouterRoute path="/product/:id" component={ProductDetail} />
-        <WouterRoute path="/cart" component={Cart} />
-        <WouterRoute path="/checkout" component={Checkout} />
-        <WouterRoute path="/checkout/status" component={CheckoutStatus} />
+        <WouterRoute path="/services" component={Services} />
+        <WouterRoute path="/products">{() => <Redirect to="/shop" />}</WouterRoute>
+        <WouterRoute path="/product/:id">{() => <Redirect to="/shop" />}</WouterRoute>
+        <WouterRoute path="/cart">{() => <Redirect to="/shop" />}</WouterRoute>
+        <WouterRoute path="/checkout">{() => <Redirect to="/shop" />}</WouterRoute>
         <WouterRoute path="/orders" component={Orders} />
         <WouterRoute path="/seller" component={Seller} />
         <WouterRoute path="/visa" component={Visa} />

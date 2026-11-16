@@ -4,6 +4,9 @@ import {
   ShieldCheck, ShoppingCart, Store, Truck, Warehouse, Ship, Landmark, CalendarClock, Check,
 } from 'lucide-react';
 import { openEnquiry } from '@/lib/config';
+import { StoreLink } from '@/components/site/store-link';
+import { Photo, hasPhoto } from '@/components/site/media';
+import type { PhotoKey } from '@/content/images';
 import { lookupShipment, type TrackingResult } from '@/lib/tracking';
 
 const Soon = ({ children = 'Coming soon' }: { children?: ReactNode }) => (
@@ -82,16 +85,15 @@ export function CarsSection() {
     <section id="cars" className="bg-[hsl(var(--secondary))] py-20 md:py-28">
       <div className="container-wide">
         <Head eyebrow="Cars" title="Vehicles, sourced and moved." body="Vehicle sourcing, import, export and shipping coordination. We do not list vehicle inventory yet — every vehicle is handled by request." />
-        <div className="mt-12 grid gap-px bg-[hsl(var(--border))] sm:grid-cols-2 lg:grid-cols-3">
-          {carCards.map(([title, service, text]) => (
-            <article key={title} className="flex flex-col bg-[hsl(var(--background))] p-6">
-              <Car className="h-5 w-5 text-[hsl(var(--accent))]" strokeWidth={1.5} />
-              <h3 className="mt-6 font-display text-xl font-bold">{title}</h3>
-              <p className="mt-2 flex-1 text-sm leading-6 text-[hsl(var(--muted-foreground))]">{text}</p>
-              <button type="button" className="service-detail-toggle mt-5 self-start" onClick={() => openEnquiry({ service })}>Request vehicle <ArrowUpRight className="h-3.5 w-3.5" /></button>
-            </article>
-          ))}
-        </div>
+        <ul className="mt-12 border-t border-[hsl(var(--border))]">
+          {carCards.map(([title, service, text], i) => (
+            <li key={title} className="grid items-baseline gap-2 border-b border-[hsl(var(--border))] py-5 md:grid-cols-[3rem_1.1fr_1.6fr_auto] md:gap-8">
+              <span className="font-mono-ui text-[0.62rem] text-[hsl(var(--accent))]">{String(i + 1).padStart(2, '0')}</span>
+              <h3 className="font-display text-2xl font-bold tracking-[-.02em]">{title}</h3>
+              <p className="text-sm leading-6 text-[hsl(var(--muted-foreground))]">{text}</p>
+              <button type="button" className="service-detail-toggle justify-self-start md:justify-self-end" onClick={() => openEnquiry({ service })}>Request <ArrowUpRight className="h-3.5 w-3.5" /></button>
+            </li>))}
+        </ul>
         <p className="mt-5 flex items-center gap-3 text-xs text-[hsl(var(--muted-foreground))]"><Soon>Marketplace coming soon</Soon> A searchable vehicle marketplace is a future feature and is not live.</p>
       </div>
     </section>
@@ -173,15 +175,12 @@ export function TrackingSection() {
 
 /* ---------- COMMERCE + PAYMENTS ---------- */
 const commerceFlow = ['Seller', 'Product', 'Cart', 'Checkout', 'Payment', 'Order', 'Fulfillment', 'Shipping', 'Tracking'];
-const providers = [
-  [CreditCard, 'Card payments'], [Banknote, 'Bank transfer'], [Landmark, 'Stripe'], [ShieldCheck, 'PayPal'], [Globe2, 'Regional gateways'],
-] as const;
 
 export function CommerceSection() {
   return (
     <section id="commerce" className="bg-[hsl(var(--secondary))] py-20 md:py-28">
       <div className="container-wide">
-        <Head eyebrow="E-commerce & payments" title="Product, seller, buyer, payment and delivery — connected." body="The commerce foundation is being built. No products are listed, no checkout is live and no payment can be taken today." />
+        <Head eyebrow="E-commerce & payments" title="Selling, shipping and delivery — one route." body="Our store runs on Shopify. DZ Seller, a marketplace for other sellers, is not live." />
         <ol className="mt-10 flex flex-wrap items-center gap-2" aria-label="Commerce flow">
           {commerceFlow.map((s, i) => <li key={s} className="flex items-center gap-2 font-mono-ui text-[0.62rem] uppercase tracking-[.12em]"><span className="border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2">{s}</span>{i < commerceFlow.length - 1 && <span aria-hidden className="text-[hsl(var(--accent))]">→</span>}</li>)}
         </ol>
@@ -193,15 +192,10 @@ export function CommerceSection() {
             <p className="mt-3 text-sm leading-6 text-[hsl(var(--muted-foreground))]">Seller onboarding, product management, orders, fulfillment, shipping, payment and customer management.</p>
             <div className="mt-5 flex flex-wrap items-center gap-3"><Soon /><button type="button" className="service-detail-toggle" onClick={() => openEnquiry({ service: 'E-commerce / DZ Seller' })}>Register interest <ArrowUpRight className="h-3.5 w-3.5" /></button></div>
           </article>
-          <article className="border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-6" id="payments">
+          <article className="border-t border-[hsl(var(--border))] pt-6" id="payments">
             <CreditCard className="h-5 w-5 text-[hsl(var(--accent))]" strokeWidth={1.5} />
-            <h3 className="mt-5 font-display text-2xl font-bold">Multi-provider payments</h3>
-            <p className="mt-3 text-sm leading-6 text-[hsl(var(--muted-foreground))]">WORSTART operates through a US LLC. Payments run through a provider-agnostic server layer; availability varies by country and provider. Card data never touches this site.</p>
-            <ul className="mt-5 grid grid-cols-2 gap-2 text-sm">
-              {providers.map(([Icon, l]) => <li key={l} className="flex items-center gap-2 border border-[hsl(var(--border))] p-3"><Icon className="h-4 w-4 text-[hsl(var(--accent))]" />{l}</li>)}
-            </ul>
-            <p className="mt-4"><Soon>Payment provider not configured</Soon></p>
-            <a href="/shop" className="service-detail-toggle mt-4">Open the shop (demo catalogue) <ArrowUpRight className="h-3.5 w-3.5" /></a>
+            <h3 className="mt-5 font-display text-2xl font-bold">Payments</h3>
+            <p className="mt-3 text-sm leading-6 text-[hsl(var(--muted-foreground))]">This website does not take online payments. Store purchases are paid at Shopify checkout, where the available methods are shown. Logistics services are quoted by our team and invoiced after you accept a proposal.</p>
           </article>
         </div>
       </div>
@@ -288,14 +282,89 @@ const eco = [
 export function EcosystemStatus() {
   return (
     <div className="container-wide pb-20 md:pb-28">
-      <div className="grid gap-px bg-[hsl(var(--border))] sm:grid-cols-2 lg:grid-cols-3" role="list" aria-label="WORSTART GLOBAL ecosystem status">
-        {eco.map(([n, d, s]) => (
-          <div role="listitem" key={n} className="flex flex-col gap-3 bg-[hsl(var(--background))] p-5">
-            <div className="flex items-center justify-between"><h3 className="font-display text-lg font-bold">{n}</h3>{s === 'soon' ? <Soon /> : <Soon>Enquiry-based</Soon>}</div>
+      <ul className="border-t border-[hsl(var(--border))]" aria-label="WORSTART GLOBAL ecosystem status">
+        {eco.map(([n, d, st]) => (
+          <li key={n} className="grid gap-1 border-b border-[hsl(var(--border))] py-4 md:grid-cols-[1fr_2fr_auto] md:items-baseline md:gap-8">
+            <h3 className="font-display text-lg font-bold">{n}</h3>
             <p className="text-sm leading-6 text-[hsl(var(--muted-foreground))]">{d}</p>
-          </div>
-        ))}
+            <Soon>{st === 'soon' ? 'Coming soon' : 'By enquiry'}</Soon>
+          </li>))}
+      </ul>
+    </div>
+  );
+}
+
+export function StoreSection() {
+  const rows: [string, string, string][] = [['01', 'General Store', 'Open on Shopify'], ['02', 'Auto', 'Coming soon · request a vehicle'], ['03', 'Machinery', 'Coming soon · request a quote']];
+  return (
+    <section id="store" className="bg-[hsl(var(--background))] py-20 md:py-28">
+      <div className="container-wide grid gap-10 lg:grid-cols-12 lg:items-end">
+        <div className="lg:col-span-7">
+          <p className="eyebrow">Stores</p>
+          <h2 className="mt-5 font-display text-5xl font-bold leading-[.98] tracking-[-.05em] md:text-7xl">Three stores. One route.</h2>
+          <ul className="mt-10 border-t border-[hsl(var(--border))]">{rows.map(([n, t, d]) => <li key={t} className="flex items-baseline gap-5 border-b border-[hsl(var(--border))] py-4"><span className="font-mono-ui text-[0.62rem] text-[hsl(var(--accent))]">{n}</span><span className="font-display text-xl font-bold">{t}</span><span className="ml-auto text-right text-xs text-[hsl(var(--muted-foreground))]">{d}</span></li>)}</ul>
+        </div>
+        <div className="lg:col-span-4 lg:col-start-9">
+          <p className="text-base leading-7 text-[hsl(var(--muted-foreground))]">The General Store is open on Shopify. Auto and Machinery are in preparation and handled by request.</p>
+          <div className="mt-7 flex flex-wrap gap-3"><a href="/shop" className="button-primary" data-testid="link-store-directory">Open the store directory</a><StoreLink className="service-detail-toggle self-center">General Store</StoreLink></div>
+        </div>
       </div>
+    </section>
+  );
+}
+
+export function LimitsSection() {
+  const rows: [string, string][] = [
+    ['What we are', 'WORSTART GLOBAL, operating through a U.S. LLC. We coordinate freight, vehicles, documentation and related services with partners.'],
+    ['How to reach us', 'Use the logistics enquiry form. We reply by email. No quote is generated automatically.'],
+    ['What we do not do', 'We are not a government authority or a bank. We cannot guarantee visa approval or customs outcomes, and we do not offer live shipment tracking yet.'],
+    ['Policies', 'Privacy and terms pages are not published yet.'],
+  ];
+  return (
+    <section className="bg-[hsl(var(--secondary))] py-20 md:py-28">
+      <div className="container-wide grid gap-10 lg:grid-cols-[1fr_2fr]">
+        <h2 className="font-display text-4xl font-bold leading-[1] tracking-[-.04em]">Plainly stated.</h2>
+        <dl className="border-t border-[hsl(var(--border))]">{rows.map(([t, d]) => <div key={t} className="grid gap-1 border-b border-[hsl(var(--border))] py-5 md:grid-cols-[12rem_1fr] md:gap-8"><dt className="font-mono-ui text-[0.65rem] uppercase tracking-[.12em] text-[hsl(var(--accent))]">{t}</dt><dd className="text-sm leading-6 text-[hsl(var(--muted-foreground))]">{d}</dd></div>)}</dl>
+      </div>
+    </section>
+  );
+}
+
+
+/* ---------- HOME: alternating image/text service sections ---------- */
+const features: { id: string; photo: PhotoKey; title: string; body: string; points: string[]; cta: string; service: string; more: string }[] = [
+  { id: 'freight', photo: 'freight', title: 'Freight, coordinated end to end.', body: 'Air, sea and road freight arranged around your cargo, timeline and destination. Tell us the route and we reply with a proposal. Nothing is priced automatically.', points: ['Air, sea, road and multimodal freight', 'Full and partial container', 'Door-to-door and port-to-port', 'Quote by request'], cta: 'Get a quote', service: 'Commercial cargo', more: '/services#logistics' },
+  { id: 'import-export', photo: 'importExport', title: 'Import and export without the guesswork.', body: 'Supplier and buyer coordination, freight, shipping and customs documentation, and delivery, handled as one conversation instead of five.', points: ['Supplier and buyer coordination', 'Commercial and shipping documents', 'Customs support and delivery', 'Commercial and personal cargo'], cta: 'Start an enquiry', service: 'Import goods', more: '/services#import-export' },
+  { id: 'vehicles', photo: 'vehicles', title: 'Vehicles, sourced and shipped.', body: 'Vehicle sourcing and purchase assistance, documentation, international shipping, and port and customs coordination. We do not list inventory. Every vehicle is handled by request.', points: ['Sourcing and purchase assistance', 'Import and export of vehicles', 'International vehicle shipping', 'Port and customs coordination'], cta: 'Request a vehicle', service: 'Vehicle sourcing request', more: '/services#cars' },
+  { id: 'fulfillment', photo: 'warehouse', title: 'Fulfillment and customs support.', body: 'Receiving, storage, picking, packing and dispatch, with documentation coordination alongside. WORSTART is not a government authority and does not grant customs approvals.', points: ['Warehousing and inventory handling', 'Packing, dispatch and returns coordination', 'Documentation coordination', 'Warehouse locations confirmed per engagement'], cta: 'Ask about fulfillment', service: 'Fulfillment & warehousing', more: '/services#logistics' },
+];
+
+export function ServiceFeatures() {
+  return (
+    <div id="capabilities">
+      {features.map((f, i) => {
+        const photo = hasPhoto(f.photo);
+        const flip = i % 2 === 1;
+        return (
+          <section key={f.id} id={f.id} aria-labelledby={`f-${f.id}`} className={`py-20 md:py-28 ${i % 2 === 0 ? 'bg-white' : 'bg-[hsl(var(--primary))]'}`}>
+            <div className="container-wide grid items-center gap-10 lg:grid-cols-12 lg:gap-16">
+              {photo && <Photo id={f.photo} className={`aspect-[4/3] lg:col-span-6 ${flip ? 'lg:order-first' : 'lg:order-last'}`} />}
+              <div className={photo ? 'lg:col-span-6' : 'lg:col-span-7'}>
+                <p className="eyebrow">{String(i + 1).padStart(2, '0')}</p>
+                <h2 id={`f-${f.id}`} className="mt-4 max-w-xl text-4xl font-bold leading-[1.05] tracking-[-.025em] md:text-5xl">{f.title}</h2>
+                <p className="mt-5 max-w-xl text-lg leading-8">{f.body}</p>
+                {!photo && null}
+                <ul className="mt-6 max-w-xl space-y-2 text-base">{f.points.map((pt) => <li key={pt} className="flex gap-3"><span aria-hidden className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[hsl(var(--accent))]" />{pt}</li>)}</ul>
+                <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+                  <button type="button" className="button-primary" onClick={() => openEnquiry({ service: f.service })}>{f.cta} <ArrowUpRight className="h-4 w-4" /></button>
+                  <a href={f.more} className="service-detail-toggle">Learn more</a>
+                </div>
+              </div>
+              {!photo && <div className="hidden lg:col-span-5 lg:block" aria-hidden><span className="block select-none text-[9rem] font-extrabold leading-none text-[hsl(var(--border))]">{String(i + 1).padStart(2, '0')}</span></div>}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }
