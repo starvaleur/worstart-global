@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ArrowUpRight, Menu, ShoppingCart, X } from 'lucide-react';
-import { openEnquiry } from '@/lib/config';
-import { useCart } from '@/lib/shop/cart';
+import { ArrowUpRight, Menu, X } from 'lucide-react';
+import { StoreLink } from '@/components/site/store-link';
+import { openEnquiry, ENQUIRY_EVENT, type EnquiryPreset } from '@/lib/config';
+import { EnquiryModal } from '@/components/site/enquiry';
 
 export function BrandMark({ light = false }: { light?: boolean }) {
   return (
@@ -13,23 +14,38 @@ export function BrandMark({ light = false }: { light?: boolean }) {
   );
 }
 
-const desktop = [['Overview', '/'], ['Services', '/#capabilities'], ['Import & Export', '/#import-export'], ['Ecosystem', '/#ecosystem'], ['Network', '/#markets'], ['How it works', '/#approach']];
-const mobile = [...desktop, ['Shop', '/shop'], ['Visa services', '/visa'], ['Appointments', '/appointments'], ['Dashboard', '/dashboard']];
+const desktop = [['Overview', '/'], ['Services', '/services'], ['Import & Export', '/services#import-export'], ['Ecosystem', '/#ecosystem'], ['Network', '/#markets'], ['How it works', '/#approach']];
+const mobile = [...desktop, ['Stores', '/shop'], ['Visa services', '/visa'], ['Appointments', '/appointments'], ['Dashboard', '/dashboard']];
 const footerCols: [string, [string, string][]][] = [
-  ['Logistics', [['Import & export', '/#import-export'], ['Cars', '/#cars'], ['Freight & fulfillment', '/#logistics'], ['Tracking', '/#tracking']]],
-  ['Commerce', [['Shop (demo)', '/shop'], ['Seller', '/seller'], ['Payments', '/#payments'], ['Orders', '/orders']]],
+  ['Logistics', [['Import & export', '/services#import-export'], ['Cars', '/services#cars'], ['Freight & fulfillment', '/services#logistics'], ['Tracking', '/services#tracking']]],
+  ['Stores', [['Store directory', '/shop'], ['General Store', '/shop#general'], ['Auto', '/shop#auto'], ['Machinery', '/shop#machinery'], ['Seller', '/seller']]],
   ['Services', [['Visa assistance', '/visa'], ['Appointments', '/appointments'], ['Dashboard', '/dashboard']]],
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [enquiry, setEnquiry] = useState<EnquiryPreset | null>(null);
+  useEffect(() => {
+    const on = (e: Event) => setEnquiry((e as CustomEvent<EnquiryPreset>).detail ?? {});
+    window.addEventListener(ENQUIRY_EVENT, on);
+    return () => window.removeEventListener(ENQUIRY_EVENT, on);
+  }, []);
   const [scrolled, setScrolled] = useState(false);
   const [loc] = useLocation();
   const btn = useRef<HTMLButtonElement>(null);
   const first = useRef<HTMLAnchorElement>(null);
-  const { count } = useCart();
 
-  useEffect(() => { setOpen(false); if (!window.location.hash) window.scrollTo(0, 0); }, [loc]);
+  useEffect(() => {
+    setOpen(false);
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    if (!id) { window.scrollTo(0, 0); return; }
+    let tries = 0;
+    const t = window.setInterval(() => {
+      const el = document.getElementById(id);
+      if (el) { el.scrollIntoView(); window.clearInterval(t); } else if (++tries > 20) window.clearInterval(t);
+    }, 60);
+    return () => window.clearInterval(t);
+  }, [loc]);
   useEffect(() => {
     const on = () => setScrolled(window.scrollY > 28); on();
     window.addEventListener('scroll', on, { passive: true }); return () => window.removeEventListener('scroll', on);
@@ -50,7 +66,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <a href="/" aria-label="WORSTART SHIPPING home" data-testid="link-home"><BrandMark /></a>
           <nav className="hidden items-center gap-6 lg:flex" aria-label="Primary navigation">
             {desktop.map(([l, h]) => <a key={l} href={h} className="nav-link">{l}</a>)}
-            <Link href="/cart" className="relative inline-flex h-10 w-10 items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--accent))]" aria-label={`Cart, ${count} items`} data-testid="link-cart"><ShoppingCart className="h-4 w-4" />{count > 0 && <span className="absolute right-0 top-0 rounded-full bg-[hsl(var(--accent))] px-1.5 text-[0.55rem]">{count}</span>}</Link>
+            <Link href="/shop" className="nav-link text-[hsl(var(--accent))]" data-testid="link-stores">Stores</Link>
             <button type="button" className="button-nav group" onClick={() => openEnquiry()} data-testid="link-header-contact">Start a logistics enquiry <ArrowUpRight className="h-3.5 w-3.5 text-[hsl(var(--accent))]" /></button>
           </nav>
           <button ref={btn} type="button" className="menu-toggle inline-flex items-center justify-center lg:hidden" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="mobile-navigation" aria-label={open ? 'Close navigation menu' : 'Open navigation menu'} data-testid="button-mobile-menu">
@@ -67,11 +83,12 @@ export function Layout({ children }: { children: ReactNode }) {
               </a>
             ))}
             <button type="button" className="mobile-nav-cta" tabIndex={open ? 0 : -1} onClick={() => { setOpen(false); openEnquiry(); }} data-testid="mobile-link-contact"><span>Start a logistics enquiry</span><ArrowUpRight /></button>
-            <Link href="/cart" className="mt-4 font-mono-ui text-xs uppercase tracking-[.12em] text-[hsl(var(--muted-foreground))]" tabIndex={open ? 0 : -1}>Cart ({count})</Link>
+            <Link href="/shop" className="mt-4 font-mono-ui text-xs uppercase tracking-[.12em] text-[hsl(var(--accent))]" tabIndex={open ? 0 : -1} onClick={() => setOpen(false)}>Store directory →</Link>
           </nav>
       </div>
 
       <main id="main">{children}</main>
+      {enquiry && <EnquiryModal preset={enquiry} onClose={() => setEnquiry(null)} />}
 
       <footer className="border-t border-[hsl(var(--border))] bg-[hsl(var(--primary))] py-14">
         <div className="container-wide">

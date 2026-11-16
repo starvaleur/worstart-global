@@ -1,0 +1,1673 @@
+From cc3c3e9228a3c43025fb3370bfe048e6c1b55323 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Mon, 26 Oct 2026 22:56:08 +0000
+Subject: [PATCH 1/4] Shopify store integration, remove demo shop, honest
+ payments copy, editorial lists, limits section
+
+---
+ artifacts/api-server/src/routes/payments.ts   |   3 +-
+ artifacts/website/.env.example                |   2 +
+ artifacts/website/src/App.tsx                 |  17 +--
+ .../website/src/components/site/layout.tsx    |  13 +-
+ .../website/src/components/site/sections.tsx  |  84 +++++++-----
+ .../src/components/site/store-link.tsx        |  13 ++
+ artifacts/website/src/lib/config.ts           |   5 +
+ artifacts/website/src/lib/shop/cart.ts        |  19 ---
+ artifacts/website/src/lib/shop/demo-seed.ts   |  13 --
+ artifacts/website/src/lib/shop/source.ts      |  11 --
+ artifacts/website/src/lib/shop/types.ts       |   3 -
+ artifacts/website/src/pages/commerce.tsx      | 120 ------------------
+ artifacts/website/src/pages/shop.tsx          |  69 ----------
+ artifacts/website/src/pages/store.tsx         |  42 ++++++
+ 14 files changed, 134 insertions(+), 280 deletions(-)
+ create mode 100644 artifacts/website/src/components/site/store-link.tsx
+ delete mode 100644 artifacts/website/src/lib/shop/cart.ts
+ delete mode 100644 artifacts/website/src/lib/shop/demo-seed.ts
+ delete mode 100644 artifacts/website/src/lib/shop/source.ts
+ delete mode 100644 artifacts/website/src/lib/shop/types.ts
+ delete mode 100644 artifacts/website/src/pages/commerce.tsx
+ delete mode 100644 artifacts/website/src/pages/shop.tsx
+ create mode 100644 artifacts/website/src/pages/store.tsx
+
+diff --git a/artifacts/api-server/src/routes/payments.ts b/artifacts/api-server/src/routes/payments.ts
+index ef2b663..073d4b0 100644
+--- a/artifacts/api-server/src/routes/payments.ts
++++ b/artifacts/api-server/src/routes/payments.ts
+@@ -5,7 +5,8 @@ import { ProviderNotConfiguredError } from "../payments/types";
+ const router: IRouter = Router();
+ 
+ router.get("/payments/providers", (_req, res) => {
+-  res.json({ providers: providers.map((p) => ({ id: p.id, label: p.label, configured: p.isConfigured() })) });
++  // Only genuinely configured providers are reported; nothing else is customer-facing.
++  res.json({ providers: providers.filter((p) => p.isConfigured()).map((p) => ({ id: p.id, label: p.label })) });
+ });
+ 
+ router.post("/payments/checkout", async (req, res) => {
+diff --git a/artifacts/website/.env.example b/artifacts/website/.env.example
+index 9d1e35a..e2e7a61 100644
+--- a/artifacts/website/.env.example
++++ b/artifacts/website/.env.example
+@@ -1,2 +1,4 @@
+ # Public (browser) — enquiries are sent via Formspree only when this is set.
+ VITE_FORMSPREE_FORM_ID=
++# Shopify storefront URL, e.g. https://your-store.myshopify.com or your custom domain (https only).
++VITE_SHOPIFY_STORE_URL=
+diff --git a/artifacts/website/src/App.tsx b/artifacts/website/src/App.tsx
+index ab10cb7..cf85eae 100644
+--- a/artifacts/website/src/App.tsx
++++ b/artifacts/website/src/App.tsx
+@@ -22,18 +22,18 @@ import { Toaster } from '@/components/ui/toaster';
+ import { TooltipProvider } from '@/components/ui/tooltip';
+ import NotFound from '@/pages/not-found';
+ import { Layout, BrandMark } from '@/components/site/layout';
+-import Shop, { ProductDetail } from '@/pages/shop';
+-import { Cart, Checkout, CheckoutStatus, Orders, Seller } from '@/pages/commerce';
++import Shop, { Orders, Seller } from '@/pages/store';
+ import { Visa, VisaRequest, Appointments } from '@/pages/visa';
+ import Dashboard from '@/pages/dashboard';
+ import { EnquiryModal } from '@/components/site/enquiry';
+-import { ImportExportSection, CarsSection, LogisticsSection, TrackingSection, CommerceSection, VisaSection, EcosystemStatus } from '@/components/site/sections';
++import { ImportExportSection, CarsSection, LogisticsSection, TrackingSection, CommerceSection, VisaSection, EcosystemStatus, StoreSection, LimitsSection } from '@/components/site/sections';
+ import { ENQUIRY_EVENT, openEnquiry, type EnquiryPreset } from '@/lib/config';
+ import {
+   Route as WouterRoute,
+   Switch,
+   useLocation,
+   Router as WouterRouter,
++  Redirect,
+ } from 'wouter';
+ 
+ const queryClient = new QueryClient();
+@@ -492,8 +492,10 @@ function Home() {
+         </section>
+ 
+         <EcosystemStatus />
++        <StoreSection />
+         <CommerceSection />
+         <VisaSection />
++        <LimitsSection />
+ 
+         <section id="approach" className="page-grid bg-[hsl(var(--secondary))] py-20 md:py-28 lg:py-32">
+           <div className="container-wide">
+@@ -666,11 +668,10 @@ function Router() {
+       <Switch>
+         <WouterRoute path="/" component={Home} />
+         <WouterRoute path="/shop" component={Shop} />
+-        <WouterRoute path="/products" component={Shop} />
+-        <WouterRoute path="/product/:id" component={ProductDetail} />
+-        <WouterRoute path="/cart" component={Cart} />
+-        <WouterRoute path="/checkout" component={Checkout} />
+-        <WouterRoute path="/checkout/status" component={CheckoutStatus} />
++        <WouterRoute path="/products">{() => <Redirect to="/shop" />}</WouterRoute>
++        <WouterRoute path="/product/:id">{() => <Redirect to="/shop" />}</WouterRoute>
++        <WouterRoute path="/cart">{() => <Redirect to="/shop" />}</WouterRoute>
++        <WouterRoute path="/checkout">{() => <Redirect to="/shop" />}</WouterRoute>
+         <WouterRoute path="/orders" component={Orders} />
+         <WouterRoute path="/seller" component={Seller} />
+         <WouterRoute path="/visa" component={Visa} />
+diff --git a/artifacts/website/src/components/site/layout.tsx b/artifacts/website/src/components/site/layout.tsx
+index c05b614..b0fe5aa 100644
+--- a/artifacts/website/src/components/site/layout.tsx
++++ b/artifacts/website/src/components/site/layout.tsx
+@@ -1,8 +1,8 @@
+ import { useEffect, useRef, useState, type ReactNode } from 'react';
+ import { Link, useLocation } from 'wouter';
+-import { ArrowUpRight, Menu, ShoppingCart, X } from 'lucide-react';
++import { ArrowUpRight, Menu, X } from 'lucide-react';
++import { StoreLink } from '@/components/site/store-link';
+ import { openEnquiry } from '@/lib/config';
+-import { useCart } from '@/lib/shop/cart';
+ 
+ export function BrandMark({ light = false }: { light?: boolean }) {
+   return (
+@@ -14,10 +14,10 @@ export function BrandMark({ light = false }: { light?: boolean }) {
+ }
+ 
+ const desktop = [['Overview', '/'], ['Services', '/#capabilities'], ['Import & Export', '/#import-export'], ['Ecosystem', '/#ecosystem'], ['Network', '/#markets'], ['How it works', '/#approach']];
+-const mobile = [...desktop, ['Shop', '/shop'], ['Visa services', '/visa'], ['Appointments', '/appointments'], ['Dashboard', '/dashboard']];
++const mobile = [...desktop, ['Visa services', '/visa'], ['Appointments', '/appointments'], ['Dashboard', '/dashboard']];
+ const footerCols: [string, [string, string][]][] = [
+   ['Logistics', [['Import & export', '/#import-export'], ['Cars', '/#cars'], ['Freight & fulfillment', '/#logistics'], ['Tracking', '/#tracking']]],
+-  ['Commerce', [['Shop (demo)', '/shop'], ['Seller', '/seller'], ['Payments', '/#payments'], ['Orders', '/orders']]],
++  ['Store', [['Shop the Store', '/shop'], ['Seller', '/seller'], ['Orders', '/orders']]],
+   ['Services', [['Visa assistance', '/visa'], ['Appointments', '/appointments'], ['Dashboard', '/dashboard']]],
+ ];
+ 
+@@ -27,7 +27,6 @@ export function Layout({ children }: { children: ReactNode }) {
+   const [loc] = useLocation();
+   const btn = useRef<HTMLButtonElement>(null);
+   const first = useRef<HTMLAnchorElement>(null);
+-  const { count } = useCart();
+ 
+   useEffect(() => { setOpen(false); if (!window.location.hash) window.scrollTo(0, 0); }, [loc]);
+   useEffect(() => {
+@@ -50,7 +49,7 @@ export function Layout({ children }: { children: ReactNode }) {
+           <a href="/" aria-label="WORSTART SHIPPING home" data-testid="link-home"><BrandMark /></a>
+           <nav className="hidden items-center gap-6 lg:flex" aria-label="Primary navigation">
+             {desktop.map(([l, h]) => <a key={l} href={h} className="nav-link">{l}</a>)}
+-            <Link href="/cart" className="relative inline-flex h-10 w-10 items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--accent))]" aria-label={`Cart, ${count} items`} data-testid="link-cart"><ShoppingCart className="h-4 w-4" />{count > 0 && <span className="absolute right-0 top-0 rounded-full bg-[hsl(var(--accent))] px-1.5 text-[0.55rem]">{count}</span>}</Link>
++            <StoreLink className="nav-link inline-flex items-center gap-1 text-[hsl(var(--accent))]" />
+             <button type="button" className="button-nav group" onClick={() => openEnquiry()} data-testid="link-header-contact">Start a logistics enquiry <ArrowUpRight className="h-3.5 w-3.5 text-[hsl(var(--accent))]" /></button>
+           </nav>
+           <button ref={btn} type="button" className="menu-toggle inline-flex items-center justify-center lg:hidden" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="mobile-navigation" aria-label={open ? 'Close navigation menu' : 'Open navigation menu'} data-testid="button-mobile-menu">
+@@ -67,7 +66,7 @@ export function Layout({ children }: { children: ReactNode }) {
+               </a>
+             ))}
+             <button type="button" className="mobile-nav-cta" tabIndex={open ? 0 : -1} onClick={() => { setOpen(false); openEnquiry(); }} data-testid="mobile-link-contact"><span>Start a logistics enquiry</span><ArrowUpRight /></button>
+-            <Link href="/cart" className="mt-4 font-mono-ui text-xs uppercase tracking-[.12em] text-[hsl(var(--muted-foreground))]" tabIndex={open ? 0 : -1}>Cart ({count})</Link>
++            <StoreLink className="mt-4 inline-flex items-center gap-2 font-mono-ui text-xs uppercase tracking-[.12em] text-[hsl(var(--accent))]" onClick={() => setOpen(false)} />
+           </nav>
+       </div>
+ 
+diff --git a/artifacts/website/src/components/site/sections.tsx b/artifacts/website/src/components/site/sections.tsx
+index 5fb8cd5..b78f7e4 100644
+--- a/artifacts/website/src/components/site/sections.tsx
++++ b/artifacts/website/src/components/site/sections.tsx
+@@ -4,6 +4,7 @@ import {
+   ShieldCheck, ShoppingCart, Store, Truck, Warehouse, Ship, Landmark, CalendarClock, Check,
+ } from 'lucide-react';
+ import { openEnquiry } from '@/lib/config';
++import { StoreLink } from '@/components/site/store-link';
+ import { lookupShipment, type TrackingResult } from '@/lib/tracking';
+ 
+ const Soon = ({ children = 'Coming soon' }: { children?: ReactNode }) => (
+@@ -82,16 +83,15 @@ export function CarsSection() {
+     <section id="cars" className="bg-[hsl(var(--secondary))] py-20 md:py-28">
+       <div className="container-wide">
+         <Head eyebrow="Cars" title="Vehicles, sourced and moved." body="Vehicle sourcing, import, export and shipping coordination. We do not list vehicle inventory yet — every vehicle is handled by request." />
+-        <div className="mt-12 grid gap-px bg-[hsl(var(--border))] sm:grid-cols-2 lg:grid-cols-3">
+-          {carCards.map(([title, service, text]) => (
+-            <article key={title} className="flex flex-col bg-[hsl(var(--background))] p-6">
+-              <Car className="h-5 w-5 text-[hsl(var(--accent))]" strokeWidth={1.5} />
+-              <h3 className="mt-6 font-display text-xl font-bold">{title}</h3>
+-              <p className="mt-2 flex-1 text-sm leading-6 text-[hsl(var(--muted-foreground))]">{text}</p>
+-              <button type="button" className="service-detail-toggle mt-5 self-start" onClick={() => openEnquiry({ service })}>Request vehicle <ArrowUpRight className="h-3.5 w-3.5" /></button>
+-            </article>
+-          ))}
+-        </div>
++        <ul className="mt-12 border-t border-[hsl(var(--border))]">
++          {carCards.map(([title, service, text], i) => (
++            <li key={title} className="grid items-baseline gap-2 border-b border-[hsl(var(--border))] py-5 md:grid-cols-[3rem_1.1fr_1.6fr_auto] md:gap-8">
++              <span className="font-mono-ui text-[0.62rem] text-[hsl(var(--accent))]">{String(i + 1).padStart(2, '0')}</span>
++              <h3 className="font-display text-2xl font-bold tracking-[-.02em]">{title}</h3>
++              <p className="text-sm leading-6 text-[hsl(var(--muted-foreground))]">{text}</p>
++              <button type="button" className="service-detail-toggle justify-self-start md:justify-self-end" onClick={() => openEnquiry({ service })}>Request <ArrowUpRight className="h-3.5 w-3.5" /></button>
++            </li>))}
++        </ul>
+         <p className="mt-5 flex items-center gap-3 text-xs text-[hsl(var(--muted-foreground))]"><Soon>Marketplace coming soon</Soon> A searchable vehicle marketplace is a future feature and is not live.</p>
+       </div>
+     </section>
+@@ -173,15 +173,12 @@ export function TrackingSection() {
+ 
+ /* ---------- COMMERCE + PAYMENTS ---------- */
+ const commerceFlow = ['Seller', 'Product', 'Cart', 'Checkout', 'Payment', 'Order', 'Fulfillment', 'Shipping', 'Tracking'];
+-const providers = [
+-  [CreditCard, 'Card payments'], [Banknote, 'Bank transfer'], [Landmark, 'Stripe'], [ShieldCheck, 'PayPal'], [Globe2, 'Regional gateways'],
+-] as const;
+ 
+ export function CommerceSection() {
+   return (
+     <section id="commerce" className="bg-[hsl(var(--secondary))] py-20 md:py-28">
+       <div className="container-wide">
+-        <Head eyebrow="E-commerce & payments" title="Product, seller, buyer, payment and delivery — connected." body="The commerce foundation is being built. No products are listed, no checkout is live and no payment can be taken today." />
++        <Head eyebrow="E-commerce & payments" title="Selling, shipping and delivery — one route." body="Our store runs on Shopify. DZ Seller, a marketplace for other sellers, is not live." />
+         <ol className="mt-10 flex flex-wrap items-center gap-2" aria-label="Commerce flow">
+           {commerceFlow.map((s, i) => <li key={s} className="flex items-center gap-2 font-mono-ui text-[0.62rem] uppercase tracking-[.12em]"><span className="border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2">{s}</span>{i < commerceFlow.length - 1 && <span aria-hidden className="text-[hsl(var(--accent))]">→</span>}</li>)}
+         </ol>
+@@ -193,15 +190,10 @@ export function CommerceSection() {
+             <p className="mt-3 text-sm leading-6 text-[hsl(var(--muted-foreground))]">Seller onboarding, product management, orders, fulfillment, shipping, payment and customer management.</p>
+             <div className="mt-5 flex flex-wrap items-center gap-3"><Soon /><button type="button" className="service-detail-toggle" onClick={() => openEnquiry({ service: 'E-commerce / DZ Seller' })}>Register interest <ArrowUpRight className="h-3.5 w-3.5" /></button></div>
+           </article>
+-          <article className="border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-6" id="payments">
++          <article className="border-t border-[hsl(var(--border))] pt-6" id="payments">
+             <CreditCard className="h-5 w-5 text-[hsl(var(--accent))]" strokeWidth={1.5} />
+-            <h3 className="mt-5 font-display text-2xl font-bold">Multi-provider payments</h3>
+-            <p className="mt-3 text-sm leading-6 text-[hsl(var(--muted-foreground))]">WORSTART operates through a US LLC. Payments run through a provider-agnostic server layer; availability varies by country and provider. Card data never touches this site.</p>
+-            <ul className="mt-5 grid grid-cols-2 gap-2 text-sm">
+-              {providers.map(([Icon, l]) => <li key={l} className="flex items-center gap-2 border border-[hsl(var(--border))] p-3"><Icon className="h-4 w-4 text-[hsl(var(--accent))]" />{l}</li>)}
+-            </ul>
+-            <p className="mt-4"><Soon>Payment provider not configured</Soon></p>
+-            <a href="/shop" className="service-detail-toggle mt-4">Open the shop (demo catalogue) <ArrowUpRight className="h-3.5 w-3.5" /></a>
++            <h3 className="mt-5 font-display text-2xl font-bold">Payments</h3>
++            <p className="mt-3 text-sm leading-6 text-[hsl(var(--muted-foreground))]">This website does not take online payments. Store purchases are paid at Shopify checkout, where the available methods are shown. Logistics services are quoted by our team and invoiced after you accept a proposal.</p>
+           </article>
+         </div>
+       </div>
+@@ -288,14 +280,48 @@ const eco = [
+ export function EcosystemStatus() {
+   return (
+     <div className="container-wide pb-20 md:pb-28">
+-      <div className="grid gap-px bg-[hsl(var(--border))] sm:grid-cols-2 lg:grid-cols-3" role="list" aria-label="WORSTART GLOBAL ecosystem status">
+-        {eco.map(([n, d, s]) => (
+-          <div role="listitem" key={n} className="flex flex-col gap-3 bg-[hsl(var(--background))] p-5">
+-            <div className="flex items-center justify-between"><h3 className="font-display text-lg font-bold">{n}</h3>{s === 'soon' ? <Soon /> : <Soon>Enquiry-based</Soon>}</div>
++      <ul className="border-t border-[hsl(var(--border))]" aria-label="WORSTART GLOBAL ecosystem status">
++        {eco.map(([n, d, st]) => (
++          <li key={n} className="grid gap-1 border-b border-[hsl(var(--border))] py-4 md:grid-cols-[1fr_2fr_auto] md:items-baseline md:gap-8">
++            <h3 className="font-display text-lg font-bold">{n}</h3>
+             <p className="text-sm leading-6 text-[hsl(var(--muted-foreground))]">{d}</p>
+-          </div>
+-        ))}
+-      </div>
++            <Soon>{st === 'soon' ? 'Coming soon' : 'By enquiry'}</Soon>
++          </li>))}
++      </ul>
+     </div>
+   );
+ }
++
++export function StoreSection() {
++  return (
++    <section id="store" className="bg-[hsl(var(--background))] py-20 md:py-28">
++      <div className="container-wide grid gap-10 lg:grid-cols-[1.3fr_1fr] lg:items-end">
++        <div>
++          <p className="eyebrow">The store</p>
++          <h2 className="mt-5 max-w-2xl font-display text-5xl font-bold leading-[.98] tracking-[-.05em] md:text-7xl">Everyday essentials, thoughtfully selected.</h2>
++        </div>
++        <div>
++          <p className="max-w-md text-base leading-7 text-[hsl(var(--muted-foreground))]">Browse our Shopify store. Products, cart, checkout and store orders are handled there, with the payment methods it offers.</p>
++          <StoreLink className="button-primary mt-7">Shop the Store</StoreLink>
++        </div>
++      </div>
++    </section>
++  );
++}
++
++export function LimitsSection() {
++  const rows: [string, string][] = [
++    ['What we are', 'WORSTART GLOBAL, operating through a U.S. LLC. We coordinate freight, vehicles, documentation and related services with partners.'],
++    ['How to reach us', 'Use the logistics enquiry form. We reply by email. No quote is generated automatically.'],
++    ['What we do not do', 'We are not a government authority or a bank. We cannot guarantee visa approval or customs outcomes, and we do not offer live shipment tracking yet.'],
++    ['Policies', 'Privacy and terms pages are not published yet.'],
++  ];
++  return (
++    <section className="bg-[hsl(var(--secondary))] py-20 md:py-28">
++      <div className="container-wide grid gap-10 lg:grid-cols-[1fr_2fr]">
++        <h2 className="font-display text-4xl font-bold leading-[1] tracking-[-.04em]">Plainly stated.</h2>
++        <dl className="border-t border-[hsl(var(--border))]">{rows.map(([t, d]) => <div key={t} className="grid gap-1 border-b border-[hsl(var(--border))] py-5 md:grid-cols-[12rem_1fr] md:gap-8"><dt className="font-mono-ui text-[0.65rem] uppercase tracking-[.12em] text-[hsl(var(--accent))]">{t}</dt><dd className="text-sm leading-6 text-[hsl(var(--muted-foreground))]">{d}</dd></div>)}</dl>
++      </div>
++    </section>
++  );
++}
+diff --git a/artifacts/website/src/components/site/store-link.tsx b/artifacts/website/src/components/site/store-link.tsx
+new file mode 100644
+index 0000000..ab361db
+--- /dev/null
++++ b/artifacts/website/src/components/site/store-link.tsx
+@@ -0,0 +1,13 @@
++import type { ReactNode } from 'react';
++import { ArrowUpRight } from 'lucide-react';
++import { storeUrl, storeConfigured } from '@/lib/config';
++
++/** Opens the Shopify storefront when configured; otherwise goes to /shop, which explains the link is being connected. */
++export function StoreLink({ children = 'Shop the Store', className = '', path = '', onClick }: { children?: ReactNode; className?: string; path?: string; onClick?: () => void }) {
++  const ok = storeConfigured();
++  return (
++    <a href={ok ? `${storeUrl}${path}` : '/shop'} {...(ok ? { target: '_blank', rel: 'noopener noreferrer' } : {})} className={className} onClick={onClick} data-testid="link-store">
++      {children}<ArrowUpRight className="h-4 w-4 shrink-0" />{ok && <span className="sr-only"> (opens in a new tab)</span>}
++    </a>
++  );
++}
+diff --git a/artifacts/website/src/lib/config.ts b/artifacts/website/src/lib/config.ts
+index c685ed6..3c1956c 100644
+--- a/artifacts/website/src/lib/config.ts
++++ b/artifacts/website/src/lib/config.ts
+@@ -4,6 +4,11 @@ export const config = {
+   formspreeFormId: (import.meta.env.VITE_FORMSPREE_FORM_ID as string | undefined)?.trim() || '',
+ };
+ 
++/** Shopify storefront URL (https only). Shopify owns inventory, cart, checkout and store orders. */
++const rawStore = (import.meta.env.VITE_SHOPIFY_STORE_URL as string | undefined)?.trim() ?? '';
++export const storeUrl = /^https:\/\/[^\s]+$/i.test(rawStore) ? rawStore.replace(/\/$/, '') : '';
++export const storeConfigured = () => storeUrl.length > 0;
++
+ export const enquiryConfigured = () => config.formspreeFormId.length > 0;
+ 
+ /** Open the enquiry modal from anywhere, optionally pre-selecting a service. */
+diff --git a/artifacts/website/src/lib/shop/cart.ts b/artifacts/website/src/lib/shop/cart.ts
+deleted file mode 100644
+index e2cec4b..0000000
+--- a/artifacts/website/src/lib/shop/cart.ts
++++ /dev/null
+@@ -1,19 +0,0 @@
+-import { useSyncExternalStore } from 'react';
+-
+-export interface CartLine { id: string; name: string; priceMinor: number; currency: string; qty: number; demo: boolean }
+-const KEY = 'worstart.cart.v1';
+-let lines: CartLine[] = [];
+-try { lines = JSON.parse(localStorage.getItem(KEY) ?? '[]'); } catch { lines = []; }
+-const subs = new Set<() => void>();
+-const commit = (next: CartLine[]) => { lines = next; try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* storage unavailable */ } subs.forEach((f) => f()); };
+-
+-export const cart = {
+-  add: (l: Omit<CartLine, 'qty'>) => commit(lines.some((x) => x.id === l.id) ? lines.map((x) => (x.id === l.id ? { ...x, qty: x.qty + 1 } : x)) : [...lines, { ...l, qty: 1 }]),
+-  setQty: (id: string, qty: number) => commit(qty <= 0 ? lines.filter((x) => x.id !== id) : lines.map((x) => (x.id === id ? { ...x, qty } : x))),
+-  remove: (id: string) => commit(lines.filter((x) => x.id !== id)),
+-  clear: () => commit([]),
+-};
+-export function useCart() {
+-  const l = useSyncExternalStore((f) => { subs.add(f); return () => subs.delete(f); }, () => lines);
+-  return { lines: l, count: l.reduce((n, x) => n + x.qty, 0), totalMinor: l.reduce((n, x) => n + x.qty * x.priceMinor, 0), currency: l[0]?.currency ?? 'USD' };
+-}
+diff --git a/artifacts/website/src/lib/shop/demo-seed.ts b/artifacts/website/src/lib/shop/demo-seed.ts
+deleted file mode 100644
+index b01d476..0000000
+--- a/artifacts/website/src/lib/shop/demo-seed.ts
++++ /dev/null
+@@ -1,13 +0,0 @@
+-// DEMO DATA ONLY. These are placeholders to exercise the UI. They are not real products,
+-// prices or stock, and nothing here can be purchased. Replace via the Supabase source.
+-import type { Product } from './types';
+-const d = (id: string, name: string, category: string, description: string, priceMinor: number): Product =>
+-  ({ id, name, category, description, priceMinor, currency: 'USD', seller: 'Demo seller', demo: true });
+-export const demoProducts: Product[] = [
+-  d('demo-1', 'Sample product: shipping cartons (pack)', 'Packaging', 'Placeholder listing used to preview the product layout.', 2500),
+-  d('demo-2', 'Sample product: pallet wrap roll', 'Packaging', 'Placeholder listing used to preview the product layout.', 1800),
+-  d('demo-3', 'Sample product: handheld label printer', 'Equipment', 'Placeholder listing used to preview the product layout.', 8900),
+-  d('demo-4', 'Sample product: tyre set', 'Auto parts', 'Placeholder listing used to preview the product layout.', 32000),
+-  d('demo-5', 'Sample product: LED work light', 'Auto parts', 'Placeholder listing used to preview the product layout.', 4200),
+-  d('demo-6', 'Sample product: dried dates (carton)', 'Food & agriculture', 'Placeholder listing used to preview the product layout.', 5600),
+-];
+diff --git a/artifacts/website/src/lib/shop/source.ts b/artifacts/website/src/lib/shop/source.ts
+deleted file mode 100644
+index 6f8dd5b..0000000
+--- a/artifacts/website/src/lib/shop/source.ts
++++ /dev/null
+@@ -1,11 +0,0 @@
+-import type { ProductSource } from './types';
+-import { demoProducts } from './demo-seed';
+-
+-/** Swap this for a Supabase-backed source when VITE_SUPABASE_URL/ANON_KEY and a products table exist. */
+-export const demoSource: ProductSource = {
+-  label: 'Demo catalogue', isDemo: true,
+-  list: async () => demoProducts,
+-  get: async (id) => demoProducts.find((p) => p.id === id) ?? null,
+-};
+-export const productSource: ProductSource = demoSource;
+-export const money = (minor: number, cur: string) => new Intl.NumberFormat('en', { style: 'currency', currency: cur }).format(minor / 100);
+diff --git a/artifacts/website/src/lib/shop/types.ts b/artifacts/website/src/lib/shop/types.ts
+deleted file mode 100644
+index f5c9514..0000000
+--- a/artifacts/website/src/lib/shop/types.ts
++++ /dev/null
+@@ -1,3 +0,0 @@
+-export interface Product { id: string; name: string; category: string; description: string; priceMinor: number; currency: string; seller: string; /** true = placeholder data, never real stock */ demo: boolean }
+-/** Production source (e.g. Supabase) must implement this; the UI only talks to it. */
+-export interface ProductSource { readonly label: string; readonly isDemo: boolean; list(): Promise<Product[]>; get(id: string): Promise<Product | null> }
+diff --git a/artifacts/website/src/pages/commerce.tsx b/artifacts/website/src/pages/commerce.tsx
+deleted file mode 100644
+index b8ef26e..0000000
+--- a/artifacts/website/src/pages/commerce.tsx
++++ /dev/null
+@@ -1,120 +0,0 @@
+-import { useEffect, useState } from 'react';
+-import { Link } from 'wouter';
+-import { Minus, Plus, Trash2 } from 'lucide-react';
+-import { Layout } from '@/components/site/layout';
+-import { Badge, Button, Card, DataTable, EmptyState, ErrorState, LoadingState, SectionHeader, Timeline } from '@/components/site/ds';
+-import { cart, useCart } from '@/lib/shop/cart';
+-import { money } from '@/lib/shop/source';
+-import { api } from '@/lib/api';
+-import { openEnquiry } from '@/lib/config';
+-
+-export function Cart() {
+-  const { lines, totalMinor, currency } = useCart();
+-  return (
+-    <Layout><div className="page-shell container-wide">
+-      <SectionHeader eyebrow="Cart" title="Your cart." />
+-      <div className="mt-10">
+-        {lines.length === 0 ? <EmptyState title="Your cart is empty" body="Add products from the shop to start an order." action={<Link href="/shop" className="button-primary">Browse the shop</Link>} /> : (
+-          <div className="grid gap-8 lg:grid-cols-[1.6fr_1fr]">
+-            <ul className="space-y-3">{lines.map((l) => (
+-              <li key={l.id} className="card-ds flex flex-wrap items-center gap-4 p-4">
+-                <div className="min-w-0 flex-1"><p className="font-semibold">{l.name}</p>{l.demo && <Badge tone="warn">Demo</Badge>}<p className="mt-1 font-mono-ui text-xs text-[hsl(var(--muted-foreground))]">{money(l.priceMinor, l.currency)}</p></div>
+-                <div className="flex items-center gap-1"><button type="button" className="icon-button" aria-label={`Decrease ${l.name}`} onClick={() => cart.setQty(l.id, l.qty - 1)}><Minus className="h-4 w-4" /></button><span className="w-8 text-center" aria-live="polite">{l.qty}</span><button type="button" className="icon-button" aria-label={`Increase ${l.name}`} onClick={() => cart.setQty(l.id, l.qty + 1)}><Plus className="h-4 w-4" /></button></div>
+-                <button type="button" className="icon-button" aria-label={`Remove ${l.name}`} onClick={() => cart.remove(l.id)}><Trash2 className="h-4 w-4" /></button>
+-              </li>))}</ul>
+-            <Card><p className="eyebrow">Summary</p><p className="mt-4 flex justify-between text-sm"><span>Subtotal</span><span className="font-mono-ui">{money(totalMinor, currency)}</span></p><p className="mt-2 text-xs text-[hsl(var(--muted-foreground))]">Shipping and taxes are confirmed at checkout.</p><Link href="/checkout" className="button-primary mt-6 w-full" data-testid="link-checkout">Continue to checkout</Link></Card>
+-          </div>)}
+-      </div>
+-    </div></Layout>
+-  );
+-}
+-
+-interface ProviderInfo { id: string; label: string; configured: boolean }
+-type Pay = { s: 'idle' } | { s: 'working' } | { s: 'failed'; msg: string };
+-
+-export function Checkout() {
+-  const { lines, totalMinor, currency } = useCart();
+-  const [providers, setProviders] = useState<ProviderInfo[] | null>(null);
+-  const [loadErr, setLoadErr] = useState('');
+-  const [choice, setChoice] = useState('');
+-  const [email, setEmail] = useState('');
+-  const [pay, setPay] = useState<Pay>({ s: 'idle' });
+-  const hasDemo = lines.some((l) => l.demo);
+-
+-  useEffect(() => { api<{ providers: ProviderInfo[] }>('/payments/providers').then((r) => r.ok ? setProviders(r.data.providers) : setLoadErr(r.error)); }, []);
+-
+-  async function submit() {
+-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setPay({ s: 'failed', msg: 'Enter a valid email address.' }); return; }
+-    setPay({ s: 'working' });
+-    const r = await api<{ redirectUrl?: string }>('/payments/checkout', { method: 'POST', body: JSON.stringify({ provider: choice, reference: `WS-${Date.now()}`, amountMinor: totalMinor, currency, customerEmail: email }) });
+-    if (r.ok && r.data.redirectUrl) { window.location.href = r.data.redirectUrl; return; }
+-    setPay({ s: 'failed', msg: r.ok ? 'The provider did not return a payment page.' : r.error });
+-  }
+-
+-  if (lines.length === 0) return <Layout><div className="page-shell container-wide"><EmptyState title="Nothing to check out" body="Your cart is empty." action={<Link href="/shop" className="button-primary">Browse the shop</Link>} /></div></Layout>;
+-  return (
+-    <Layout><div className="page-shell container-wide">
+-      <SectionHeader eyebrow="Checkout" title="Checkout." body="Payment status is decided by the payment provider through our server — never by this page." />
+-      <div className="mt-10 grid gap-8 lg:grid-cols-[1.4fr_1fr]">
+-        <div className="space-y-6">
+-          <label className="block"><span className="field-label">Email *</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="field-input" data-testid="input-checkout-email" /></label>
+-          <fieldset><legend className="field-label">Payment method</legend>
+-            <div className="mt-3 space-y-2">
+-              {!providers && !loadErr && <LoadingState label="Loading payment methods…" />}
+-              {loadErr && <ErrorState title="Payment methods unavailable" body={loadErr} />}
+-              {providers?.map((p) => (
+-                <label key={p.id} className={`card-ds flex items-center gap-3 p-4 ${p.configured ? 'cursor-pointer' : 'opacity-60'}`}>
+-                  <input type="radio" name="pm" disabled={!p.configured} checked={choice === p.id} onChange={() => setChoice(p.id)} /><span className="flex-1 text-sm font-semibold">{p.label}</span>
+-                  {!p.configured && <Badge>Payment provider not configured</Badge>}
+-                </label>))}
+-            </div>
+-          </fieldset>
+-          {hasDemo && <div role="alert" className="border border-amber-500/40 p-4 text-sm">Your cart contains demo products, which cannot be purchased. Checkout is disabled until real products are listed.</div>}
+-          {pay.s === 'failed' && <ErrorState title="Payment not started" body={pay.msg} />}
+-          <Button disabled={hasDemo || !choice || pay.s === 'working'} onClick={submit} data-testid="button-pay">{pay.s === 'working' ? 'Contacting provider…' : 'Pay securely'}</Button>
+-        </div>
+-        <Card><p className="eyebrow">Order summary</p><ul className="mt-4 space-y-2 text-sm">{lines.map((l) => <li key={l.id} className="flex justify-between gap-3"><span>{l.qty} × {l.name}</span><span className="font-mono-ui">{money(l.qty * l.priceMinor, l.currency)}</span></li>)}</ul><p className="mt-5 flex justify-between border-t border-[hsl(var(--border))] pt-4 text-sm font-semibold"><span>Total</span><span className="font-mono-ui">{money(totalMinor, currency)}</span></p></Card>
+-      </div>
+-    </div></Layout>
+-  );
+-}
+-
+-export function CheckoutStatus() {
+-  const ref = new URLSearchParams(window.location.search).get('ref') ?? '';
+-  const [state, setState] = useState<{ s: 'loading' } | { s: 'error'; msg: string } | { s: 'ok'; status: string }>({ s: 'loading' });
+-  useEffect(() => { if (!ref) { setState({ s: 'error', msg: 'No payment reference supplied.' }); return; } api<{ status: string }>(`/payments/${encodeURIComponent(ref)}/status`).then((r) => setState(r.ok ? { s: 'ok', status: r.data.status } : { s: 'error', msg: r.error })); }, [ref]);
+-  return (
+-    <Layout><div className="page-shell container-wide max-w-2xl">
+-      <SectionHeader eyebrow="Payment status" title="Payment status." />
+-      <div className="mt-8" aria-live="polite">
+-        {state.s === 'loading' && <LoadingState label="Asking the server for the verified status…" />}
+-        {state.s === 'error' && <ErrorState title="Status unavailable" body={`${state.msg} We cannot confirm this payment from the browser.`} />}
+-        {state.s === 'ok' && <Card><Badge tone={state.status === 'succeeded' ? 'ok' : state.status === 'failed' ? 'danger' : 'warn'}>{state.status}</Badge><p className="mt-3 text-sm">Reference {ref}</p></Card>}
+-      </div>
+-    </div></Layout>
+-  );
+-}
+-
+-export function Orders() {
+-  return (
+-    <Layout><div className="page-shell container-wide">
+-      <SectionHeader eyebrow="Orders" title="Your orders." />
+-      <div className="mt-10 grid gap-8 lg:grid-cols-2">
+-        <DataTable columns={[{ key: 'id', label: 'Order', render: (r: { id: string }) => r.id }]} rows={[]} empty={<EmptyState title="No orders to show" body="Order history requires sign-in and a connected order database. Neither is enabled yet, so no orders are displayed." />} />
+-        <Card><p className="eyebrow">Order lifecycle</p><div className="mt-5"><Timeline steps={[{ title: 'Order placed' }, { title: 'Payment verified by provider' }, { title: 'Fulfillment' }, { title: 'Shipping' }, { title: 'Delivered' }]} /></div></Card>
+-      </div>
+-    </div></Layout>
+-  );
+-}
+-
+-export function Seller() {
+-  return (
+-    <Layout><div className="page-shell container-wide">
+-      <SectionHeader eyebrow="DZ Seller" title="Sell globally. WORSTART handles the route." body="Seller onboarding, product management, orders, fulfillment, shipping, payment and customer management." />
+-      <div className="mt-10 grid gap-5 md:grid-cols-3">
+-        {['Seller onboarding', 'Product management', 'Orders & fulfillment'].map((t) => <Card key={t}><Badge>Coming soon</Badge><h2 className="mt-4 font-display text-xl font-bold">{t}</h2><p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">Not live yet. Seller accounts require authentication and a product database.</p></Card>)}
+-      </div>
+-      <Button className="mt-8" onClick={() => openEnquiry({ service: 'E-commerce / DZ Seller' })}>Register seller interest</Button>
+-    </div></Layout>
+-  );
+-}
+diff --git a/artifacts/website/src/pages/shop.tsx b/artifacts/website/src/pages/shop.tsx
+deleted file mode 100644
+index 6bbd3bb..0000000
+--- a/artifacts/website/src/pages/shop.tsx
++++ /dev/null
+@@ -1,69 +0,0 @@
+-import { useEffect, useMemo, useState } from 'react';
+-import { Link, useRoute } from 'wouter';
+-import { Search, ShoppingCart } from 'lucide-react';
+-import { Layout } from '@/components/site/layout';
+-import { Badge, Button, EmptyState, ErrorState, LoadingState, SectionHeader } from '@/components/site/ds';
+-import { productSource, money } from '@/lib/shop/source';
+-import { cart } from '@/lib/shop/cart';
+-import type { Product } from '@/lib/shop/types';
+-
+-function useProducts() {
+-  const [items, setItems] = useState<Product[] | null>(null);
+-  const [error, setError] = useState('');
+-  useEffect(() => { productSource.list().then(setItems).catch(() => setError('The product catalogue could not be loaded.')); }, []);
+-  return { items, error };
+-}
+-
+-export const DemoNotice = () => productSource.isDemo ? (
+-  <div className="mt-8 flex flex-wrap items-center gap-3 border border-amber-500/40 p-4 text-sm"><Badge tone="warn">Demo catalogue</Badge><span className="text-[hsl(var(--muted-foreground))]">These are placeholder products to preview the shop. They are not real inventory and cannot be purchased.</span></div>
+-) : null;
+-
+-export default function Shop() {
+-  const { items, error } = useProducts();
+-  const [q, setQ] = useState('');
+-  const [cat, setCat] = useState('All');
+-  const cats = useMemo(() => ['All', ...Array.from(new Set((items ?? []).map((p) => p.category)))], [items]);
+-  const list = (items ?? []).filter((p) => (cat === 'All' || p.category === cat) && p.name.toLowerCase().includes(q.trim().toLowerCase()));
+-  return (
+-    <Layout><div className="page-shell container-wide">
+-      <SectionHeader eyebrow="Shop / products" title="WORSTART shop." body="A commerce foundation connecting product, seller, payment, fulfillment and delivery." />
+-      <DemoNotice />
+-      <div className="mt-8 flex flex-col gap-4 md:flex-row md:items-end">
+-        <label className="flex-1"><span className="field-label">Search products</span><span className="relative block"><Search className="absolute left-0 top-[1.15rem] h-4 w-4 text-[hsl(var(--muted-foreground))]" /><input value={q} onChange={(e) => setQ(e.target.value)} className="field-input pl-7" data-testid="input-shop-search" /></span></label>
+-        <div className="flex flex-wrap gap-2" role="group" aria-label="Categories">{cats.map((c) => <button key={c} type="button" aria-pressed={cat === c} onClick={() => setCat(c)} className={`min-h-11 border px-3 text-xs font-semibold ${cat === c ? 'border-[hsl(var(--accent))] bg-[hsl(var(--primary))]' : 'border-[hsl(var(--border))]'}`}>{c}</button>)}</div>
+-      </div>
+-      <div className="mt-10">
+-        {error ? <ErrorState body={error} /> : !items ? <LoadingState label="Loading products…" /> : list.length === 0 ? <EmptyState title="No products found" body="Try a different search or category." /> : (
+-          <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{list.map((p) => (
+-            <li key={p.id} className="card-ds card-ds-hover flex flex-col p-5">
+-              <div className="flex items-center justify-between"><Badge>{p.category}</Badge>{p.demo && <Badge tone="warn">Demo</Badge>}</div>
+-              <Link href={`/product/${p.id}`} className="mt-5 font-display text-lg font-bold hover:text-[hsl(var(--accent))]">{p.name}</Link>
+-              <p className="mt-2 flex-1 text-sm text-[hsl(var(--muted-foreground))]">{p.description}</p>
+-              <div className="mt-5 flex items-center justify-between"><span className="font-mono-ui text-sm">{money(p.priceMinor, p.currency)}</span><Button variant="secondary" icon={false} onClick={() => cart.add({ id: p.id, name: p.name, priceMinor: p.priceMinor, currency: p.currency, demo: p.demo })}><ShoppingCart className="h-4 w-4" />Add</Button></div>
+-            </li>))}</ul>)}
+-      </div>
+-    </div></Layout>
+-  );
+-}
+-
+-export function ProductDetail() {
+-  const [, params] = useRoute('/product/:id');
+-  const [p, setP] = useState<Product | null | undefined>(undefined);
+-  useEffect(() => { if (params?.id) productSource.get(params.id).then(setP).catch(() => setP(null)); }, [params?.id]);
+-  return (
+-    <Layout><div className="page-shell container-wide">
+-      {p === undefined ? <LoadingState /> : p === null ? <EmptyState title="Product not found" body="This product does not exist." action={<Link href="/shop" className="button-secondary">Back to shop</Link>} /> : (
+-        <div className="grid gap-10 lg:grid-cols-2">
+-          <div className="glass flex aspect-[4/3] items-center justify-center text-sm text-[hsl(var(--muted-foreground))]">No image</div>
+-          <div>
+-            <div className="flex gap-2"><Badge>{p.category}</Badge>{p.demo && <Badge tone="warn">Demo — not real inventory</Badge>}</div>
+-            <h1 className="mt-5 font-display text-4xl font-bold tracking-[-.03em]">{p.name}</h1>
+-            <p className="mt-2 font-mono-ui text-xl">{money(p.priceMinor, p.currency)}</p>
+-            <p className="mt-5 text-sm leading-6 text-[hsl(var(--muted-foreground))]">{p.description}</p>
+-            <p className="mt-4 text-xs text-[hsl(var(--muted-foreground))]">Sold by {p.seller}. Shipping and fulfillment options are confirmed at checkout.</p>
+-            <div className="mt-8 flex flex-wrap gap-3"><Button onClick={() => cart.add({ id: p.id, name: p.name, priceMinor: p.priceMinor, currency: p.currency, demo: p.demo })}>Add to cart</Button><Link href="/cart" className="button-secondary">View cart</Link></div>
+-          </div>
+-        </div>)}
+-    </div></Layout>
+-  );
+-}
+diff --git a/artifacts/website/src/pages/store.tsx b/artifacts/website/src/pages/store.tsx
+new file mode 100644
+index 0000000..9683389
+--- /dev/null
++++ b/artifacts/website/src/pages/store.tsx
+@@ -0,0 +1,42 @@
++import { Link } from 'wouter';
++import { Layout } from '@/components/site/layout';
++import { StoreLink } from '@/components/site/store-link';
++import { Badge, Button, SectionHeader } from '@/components/site/ds';
++import { storeConfigured } from '@/lib/config';
++import { openEnquiry } from '@/lib/config';
++
++export default function Shop() {
++  const ok = storeConfigured();
++  return (
++    <Layout><div className="page-shell container-wide">
++      <SectionHeader eyebrow="The store" title="Shop the WORSTARTGLOBAL store." body="Products, cart, checkout and store orders are handled by our Shopify storefront, not by this website." />
++      <div className="mt-12 grid gap-10 lg:grid-cols-[1.2fr_1fr]">
++        <div>
++          {ok ? <StoreLink className="button-primary">Open the store</StoreLink> : <div role="status" className="border-l-2 border-[hsl(var(--accent))] pl-4"><Badge tone="warn">Store link pending</Badge><p className="mt-3 max-w-md text-sm leading-6 text-[hsl(var(--muted-foreground))]">The storefront link is being connected and is not available from this site yet. There are no products to buy here. Ask us and we will point you to the store when it is ready.</p><Button className="mt-5" variant="secondary" onClick={() => openEnquiry({ service: 'E-commerce / DZ Seller', description: 'Please send me the store link.' })}>Ask about the store</Button></div>}
++        </div>
++        <ul className="space-y-4 text-sm leading-6 text-[hsl(var(--muted-foreground))]">
++          <li><strong className="text-[hsl(var(--foreground))]">Checkout &amp; payment</strong> happen on Shopify. Available payment methods are shown there, not here.</li>
++          <li><strong className="text-[hsl(var(--foreground))]">Store orders</strong> and tracking emails come from the store. For freight, vehicles or customs, use a <Link href="/#contact" className="underline">logistics enquiry</Link>.</li>
++        </ul>
++      </div>
++    </div></Layout>
++  );
++}
++
++export function Orders() {
++  return (
++    <Layout><div className="page-shell container-wide max-w-3xl">
++      <SectionHeader eyebrow="Orders" title="Where are my orders?" body="Store orders are managed by Shopify. Freight and logistics requests are answered by email after you submit an enquiry." />
++      <div className="mt-8 flex flex-wrap gap-3"><StoreLink className="button-primary">Shop the Store</StoreLink><Link href="/#tracking" className="button-secondary">Shipment visibility</Link></div>
++    </div></Layout>
++  );
++}
++
++export function Seller() {
++  return (
++    <Layout><div className="page-shell container-wide max-w-3xl">
++      <SectionHeader eyebrow="DZ Seller" title="Sell globally. WORSTART handles the route." body="Seller onboarding is not live. Register your interest and we will contact you by email." />
++      <Button className="mt-8" onClick={() => openEnquiry({ service: 'E-commerce / DZ Seller' })}>Register seller interest</Button>
++    </div></Layout>
++  );
++}
+-- 
+2.43.0
+
+
+From 2c4b0400b2d92cdfb89096326f88ac6b4e7f4941 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Mon, 26 Oct 2026 23:06:57 +0000
+Subject: [PATCH 2/4] Store Directory: General Store (Shopify), Auto and
+ Machinery coming-soon with sourcing enquiries; fix enquiry modal on all pages
+
+---
+ artifacts/website/.env.example                |  3 ++
+ artifacts/website/src/App.tsx                 |  1 -
+ .../website/src/components/site/enquiry.tsx   |  2 +-
+ .../website/src/components/site/layout.tsx    | 18 +++++--
+ .../website/src/components/site/sections.tsx  | 16 +++---
+ .../src/components/site/store-link.tsx        | 11 ++--
+ artifacts/website/src/lib/config.ts           |  9 +++-
+ artifacts/website/src/pages/store.tsx         | 50 ++++++++++++++-----
+ 8 files changed, 75 insertions(+), 35 deletions(-)
+
+diff --git a/artifacts/website/.env.example b/artifacts/website/.env.example
+index e2e7a61..4494119 100644
+--- a/artifacts/website/.env.example
++++ b/artifacts/website/.env.example
+@@ -2,3 +2,6 @@
+ VITE_FORMSPREE_FORM_ID=
+ # Shopify storefront URL, e.g. https://your-store.myshopify.com or your custom domain (https only).
+ VITE_SHOPIFY_STORE_URL=
++# Optional: set when these storefronts are live. Until then the Store Directory shows enquiry options.
++VITE_AUTO_STORE_URL=
++VITE_MACHINERY_STORE_URL=
+diff --git a/artifacts/website/src/App.tsx b/artifacts/website/src/App.tsx
+index cf85eae..7581954 100644
+--- a/artifacts/website/src/App.tsx
++++ b/artifacts/website/src/App.tsx
+@@ -657,7 +657,6 @@ function Home() {
+         </section>
+       </div>
+ 
+-      {enquiry && <EnquiryModal preset={enquiry} onClose={() => setEnquiry(null)} />}
+     </Layout>
+   );
+ }
+diff --git a/artifacts/website/src/components/site/enquiry.tsx b/artifacts/website/src/components/site/enquiry.tsx
+index 86c5499..5e1cd15 100644
+--- a/artifacts/website/src/components/site/enquiry.tsx
++++ b/artifacts/website/src/components/site/enquiry.tsx
+@@ -4,7 +4,7 @@ import { config, enquiryConfigured, type EnquiryPreset } from '@/lib/config';
+ 
+ export const SERVICES = [
+   'Import goods', 'Export goods', 'Import a car', 'Export a car', 'Commercial cargo', 'Personal cargo',
+-  'Fulfillment & warehousing', 'Customs & documentation', 'E-commerce / DZ Seller', 'Vehicle leasing / booking',
++  'Fulfillment & warehousing', 'Customs & documentation', 'E-commerce / DZ Seller', 'Vehicle leasing / booking', 'Vehicle sourcing request', 'Machinery sourcing enquiry', 'Automotive parts request',
+   'Visa assistance', 'Visa appointment assistance', 'Other',
+ ];
+ 
+diff --git a/artifacts/website/src/components/site/layout.tsx b/artifacts/website/src/components/site/layout.tsx
+index b0fe5aa..8652195 100644
+--- a/artifacts/website/src/components/site/layout.tsx
++++ b/artifacts/website/src/components/site/layout.tsx
+@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
+ import { Link, useLocation } from 'wouter';
+ import { ArrowUpRight, Menu, X } from 'lucide-react';
+ import { StoreLink } from '@/components/site/store-link';
+-import { openEnquiry } from '@/lib/config';
++import { openEnquiry, ENQUIRY_EVENT, type EnquiryPreset } from '@/lib/config';
++import { EnquiryModal } from '@/components/site/enquiry';
+ 
+ export function BrandMark({ light = false }: { light?: boolean }) {
+   return (
+@@ -14,15 +15,21 @@ export function BrandMark({ light = false }: { light?: boolean }) {
+ }
+ 
+ const desktop = [['Overview', '/'], ['Services', '/#capabilities'], ['Import & Export', '/#import-export'], ['Ecosystem', '/#ecosystem'], ['Network', '/#markets'], ['How it works', '/#approach']];
+-const mobile = [...desktop, ['Visa services', '/visa'], ['Appointments', '/appointments'], ['Dashboard', '/dashboard']];
++const mobile = [...desktop, ['Stores', '/shop'], ['Visa services', '/visa'], ['Appointments', '/appointments'], ['Dashboard', '/dashboard']];
+ const footerCols: [string, [string, string][]][] = [
+   ['Logistics', [['Import & export', '/#import-export'], ['Cars', '/#cars'], ['Freight & fulfillment', '/#logistics'], ['Tracking', '/#tracking']]],
+-  ['Store', [['Shop the Store', '/shop'], ['Seller', '/seller'], ['Orders', '/orders']]],
++  ['Stores', [['Store directory', '/shop'], ['General Store', '/shop#general'], ['Auto', '/shop#auto'], ['Machinery', '/shop#machinery'], ['Seller', '/seller']]],
+   ['Services', [['Visa assistance', '/visa'], ['Appointments', '/appointments'], ['Dashboard', '/dashboard']]],
+ ];
+ 
+ export function Layout({ children }: { children: ReactNode }) {
+   const [open, setOpen] = useState(false);
++  const [enquiry, setEnquiry] = useState<EnquiryPreset | null>(null);
++  useEffect(() => {
++    const on = (e: Event) => setEnquiry((e as CustomEvent<EnquiryPreset>).detail ?? {});
++    window.addEventListener(ENQUIRY_EVENT, on);
++    return () => window.removeEventListener(ENQUIRY_EVENT, on);
++  }, []);
+   const [scrolled, setScrolled] = useState(false);
+   const [loc] = useLocation();
+   const btn = useRef<HTMLButtonElement>(null);
+@@ -49,7 +56,7 @@ export function Layout({ children }: { children: ReactNode }) {
+           <a href="/" aria-label="WORSTART SHIPPING home" data-testid="link-home"><BrandMark /></a>
+           <nav className="hidden items-center gap-6 lg:flex" aria-label="Primary navigation">
+             {desktop.map(([l, h]) => <a key={l} href={h} className="nav-link">{l}</a>)}
+-            <StoreLink className="nav-link inline-flex items-center gap-1 text-[hsl(var(--accent))]" />
++            <Link href="/shop" className="nav-link text-[hsl(var(--accent))]" data-testid="link-stores">Stores</Link>
+             <button type="button" className="button-nav group" onClick={() => openEnquiry()} data-testid="link-header-contact">Start a logistics enquiry <ArrowUpRight className="h-3.5 w-3.5 text-[hsl(var(--accent))]" /></button>
+           </nav>
+           <button ref={btn} type="button" className="menu-toggle inline-flex items-center justify-center lg:hidden" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="mobile-navigation" aria-label={open ? 'Close navigation menu' : 'Open navigation menu'} data-testid="button-mobile-menu">
+@@ -66,11 +73,12 @@ export function Layout({ children }: { children: ReactNode }) {
+               </a>
+             ))}
+             <button type="button" className="mobile-nav-cta" tabIndex={open ? 0 : -1} onClick={() => { setOpen(false); openEnquiry(); }} data-testid="mobile-link-contact"><span>Start a logistics enquiry</span><ArrowUpRight /></button>
+-            <StoreLink className="mt-4 inline-flex items-center gap-2 font-mono-ui text-xs uppercase tracking-[.12em] text-[hsl(var(--accent))]" onClick={() => setOpen(false)} />
++            <Link href="/shop" className="mt-4 font-mono-ui text-xs uppercase tracking-[.12em] text-[hsl(var(--accent))]" tabIndex={open ? 0 : -1} onClick={() => setOpen(false)}>Store directory →</Link>
+           </nav>
+       </div>
+ 
+       <main id="main">{children}</main>
++      {enquiry && <EnquiryModal preset={enquiry} onClose={() => setEnquiry(null)} />}
+ 
+       <footer className="border-t border-[hsl(var(--border))] bg-[hsl(var(--primary))] py-14">
+         <div className="container-wide">
+diff --git a/artifacts/website/src/components/site/sections.tsx b/artifacts/website/src/components/site/sections.tsx
+index b78f7e4..4d8c26a 100644
+--- a/artifacts/website/src/components/site/sections.tsx
++++ b/artifacts/website/src/components/site/sections.tsx
+@@ -293,16 +293,18 @@ export function EcosystemStatus() {
+ }
+ 
+ export function StoreSection() {
++  const rows: [string, string, string][] = [['01', 'General Store', 'Open on Shopify'], ['02', 'Auto', 'Coming soon · request a vehicle'], ['03', 'Machinery', 'Coming soon · request a quote']];
+   return (
+     <section id="store" className="bg-[hsl(var(--background))] py-20 md:py-28">
+-      <div className="container-wide grid gap-10 lg:grid-cols-[1.3fr_1fr] lg:items-end">
+-        <div>
+-          <p className="eyebrow">The store</p>
+-          <h2 className="mt-5 max-w-2xl font-display text-5xl font-bold leading-[.98] tracking-[-.05em] md:text-7xl">Everyday essentials, thoughtfully selected.</h2>
++      <div className="container-wide grid gap-10 lg:grid-cols-12 lg:items-end">
++        <div className="lg:col-span-7">
++          <p className="eyebrow">Stores</p>
++          <h2 className="mt-5 font-display text-5xl font-bold leading-[.98] tracking-[-.05em] md:text-7xl">Three stores. One route.</h2>
++          <ul className="mt-10 border-t border-[hsl(var(--border))]">{rows.map(([n, t, d]) => <li key={t} className="flex items-baseline gap-5 border-b border-[hsl(var(--border))] py-4"><span className="font-mono-ui text-[0.62rem] text-[hsl(var(--accent))]">{n}</span><span className="font-display text-xl font-bold">{t}</span><span className="ml-auto text-right text-xs text-[hsl(var(--muted-foreground))]">{d}</span></li>)}</ul>
+         </div>
+-        <div>
+-          <p className="max-w-md text-base leading-7 text-[hsl(var(--muted-foreground))]">Browse our Shopify store. Products, cart, checkout and store orders are handled there, with the payment methods it offers.</p>
+-          <StoreLink className="button-primary mt-7">Shop the Store</StoreLink>
++        <div className="lg:col-span-4 lg:col-start-9">
++          <p className="text-base leading-7 text-[hsl(var(--muted-foreground))]">The General Store is open on Shopify. Auto and Machinery are in preparation and handled by request.</p>
++          <div className="mt-7 flex flex-wrap gap-3"><a href="/shop" className="button-primary" data-testid="link-store-directory">Open the store directory</a><StoreLink className="service-detail-toggle self-center">General Store</StoreLink></div>
+         </div>
+       </div>
+     </section>
+diff --git a/artifacts/website/src/components/site/store-link.tsx b/artifacts/website/src/components/site/store-link.tsx
+index ab361db..a299696 100644
+--- a/artifacts/website/src/components/site/store-link.tsx
++++ b/artifacts/website/src/components/site/store-link.tsx
+@@ -1,13 +1,12 @@
+ import type { ReactNode } from 'react';
+ import { ArrowUpRight } from 'lucide-react';
+-import { storeUrl, storeConfigured } from '@/lib/config';
++import { storeUrl } from '@/lib/config';
+ 
+-/** Opens the Shopify storefront when configured; otherwise goes to /shop, which explains the link is being connected. */
+-export function StoreLink({ children = 'Shop the Store', className = '', path = '', onClick }: { children?: ReactNode; className?: string; path?: string; onClick?: () => void }) {
+-  const ok = storeConfigured();
++/** Opens the WORSTART General Store (Shopify) in a new tab. */
++export function StoreLink({ children = 'Visit the General Store', className = '', path = '', onClick }: { children?: ReactNode; className?: string; path?: string; onClick?: () => void }) {
+   return (
+-    <a href={ok ? `${storeUrl}${path}` : '/shop'} {...(ok ? { target: '_blank', rel: 'noopener noreferrer' } : {})} className={className} onClick={onClick} data-testid="link-store">
+-      {children}<ArrowUpRight className="h-4 w-4 shrink-0" />{ok && <span className="sr-only"> (opens in a new tab)</span>}
++    <a href={`${storeUrl}${path}`} target="_blank" rel="noopener noreferrer" className={className} onClick={onClick} data-testid="link-store">
++      {children}<ArrowUpRight className="h-4 w-4 shrink-0" /><span className="sr-only"> (opens in a new tab)</span>
+     </a>
+   );
+ }
+diff --git a/artifacts/website/src/lib/config.ts b/artifacts/website/src/lib/config.ts
+index 3c1956c..2047687 100644
+--- a/artifacts/website/src/lib/config.ts
++++ b/artifacts/website/src/lib/config.ts
+@@ -4,8 +4,8 @@ export const config = {
+   formspreeFormId: (import.meta.env.VITE_FORMSPREE_FORM_ID as string | undefined)?.trim() || '',
+ };
+ 
+-/** Shopify storefront URL (https only). Shopify owns inventory, cart, checkout and store orders. */
+-const rawStore = (import.meta.env.VITE_SHOPIFY_STORE_URL as string | undefined)?.trim() ?? '';
++/** Shopify storefront URL (https only). Defaults to the live WORSTART General Store; override with VITE_SHOPIFY_STORE_URL. Shopify owns inventory, cart, checkout and store orders. */
++const rawStore = (import.meta.env.VITE_SHOPIFY_STORE_URL as string | undefined)?.trim() || 'https://shop.worstartglobal.com';
+ export const storeUrl = /^https:\/\/[^\s]+$/i.test(rawStore) ? rawStore.replace(/\/$/, '') : '';
+ export const storeConfigured = () => storeUrl.length > 0;
+ 
+@@ -16,3 +16,8 @@ export const ENQUIRY_EVENT = 'worstart:enquiry';
+ export type EnquiryPreset = { service?: string; kind?: 'logistics' | 'visa' | 'appointment'; description?: string };
+ export const openEnquiry = (preset: EnquiryPreset = {}) =>
+   window.dispatchEvent(new CustomEvent<EnquiryPreset>(ENQUIRY_EVENT, { detail: preset }));
++
++/** Future storefronts. Leave empty until each has a real URL and inventory; the UI then shows enquiry options instead. */
++const clean = (v?: string) => (v && /^https:\/\/[^\s]+$/i.test(v.trim()) ? v.trim().replace(/\/$/, '') : '');
++export const autoStoreUrl = clean(import.meta.env.VITE_AUTO_STORE_URL as string | undefined);
++export const machineryStoreUrl = clean(import.meta.env.VITE_MACHINERY_STORE_URL as string | undefined);
+diff --git a/artifacts/website/src/pages/store.tsx b/artifacts/website/src/pages/store.tsx
+index 9683389..636491b 100644
+--- a/artifacts/website/src/pages/store.tsx
++++ b/artifacts/website/src/pages/store.tsx
+@@ -2,23 +2,47 @@ import { Link } from 'wouter';
+ import { Layout } from '@/components/site/layout';
+ import { StoreLink } from '@/components/site/store-link';
+ import { Badge, Button, SectionHeader } from '@/components/site/ds';
+-import { storeConfigured } from '@/lib/config';
+-import { openEnquiry } from '@/lib/config';
++import { openEnquiry, storeUrl, autoStoreUrl, machineryStoreUrl } from '@/lib/config';
++
++type Dest = { id: string; n: string; name: string; line: string; body: string; live: boolean; external: string; actions: { label: string; service: string; kind?: 'primary' | 'secondary' }[] };
++
++const destinations: Dest[] = [
++  { id: 'general', n: '01', name: 'WORSTART General Store', line: 'Everyday essentials, thoughtfully selected.', body: 'Our Shopify store. Products, stock, cart, checkout and store orders are managed there, with the payment methods it offers.', live: true, external: storeUrl, actions: [] },
++  { id: 'auto', n: '02', name: 'WORSTART Auto', line: 'Cars, parts and vehicle sourcing.', body: 'A planned storefront for new and used cars, automotive parts and accessories. It is not open yet and lists no vehicles or prices. Tell us what you need and our team will respond by email.', live: false, external: autoStoreUrl, actions: [{ label: 'Request a vehicle', service: 'Vehicle sourcing request', kind: 'primary' }, { label: 'Request parts or accessories', service: 'Automotive parts request', kind: 'secondary' }] },
++  { id: 'machinery', n: '03', name: 'WORSTART Machinery', line: 'Industrial machinery, workshop equipment and spare parts.', body: 'A planned storefront for industrial machinery, workshop equipment and spare parts. It is not open yet and lists no equipment or prices. Send us a sourcing enquiry and our team will respond by email.', live: false, external: machineryStoreUrl, actions: [{ label: 'Request a quote', service: 'Machinery sourcing enquiry', kind: 'primary' }] },
++];
+ 
+ export default function Shop() {
+-  const ok = storeConfigured();
+   return (
+     <Layout><div className="page-shell container-wide">
+-      <SectionHeader eyebrow="The store" title="Shop the WORSTARTGLOBAL store." body="Products, cart, checkout and store orders are handled by our Shopify storefront, not by this website." />
+-      <div className="mt-12 grid gap-10 lg:grid-cols-[1.2fr_1fr]">
+-        <div>
+-          {ok ? <StoreLink className="button-primary">Open the store</StoreLink> : <div role="status" className="border-l-2 border-[hsl(var(--accent))] pl-4"><Badge tone="warn">Store link pending</Badge><p className="mt-3 max-w-md text-sm leading-6 text-[hsl(var(--muted-foreground))]">The storefront link is being connected and is not available from this site yet. There are no products to buy here. Ask us and we will point you to the store when it is ready.</p><Button className="mt-5" variant="secondary" onClick={() => openEnquiry({ service: 'E-commerce / DZ Seller', description: 'Please send me the store link.' })}>Ask about the store</Button></div>}
+-        </div>
+-        <ul className="space-y-4 text-sm leading-6 text-[hsl(var(--muted-foreground))]">
+-          <li><strong className="text-[hsl(var(--foreground))]">Checkout &amp; payment</strong> happen on Shopify. Available payment methods are shown there, not here.</li>
+-          <li><strong className="text-[hsl(var(--foreground))]">Store orders</strong> and tracking emails come from the store. For freight, vehicles or customs, use a <Link href="/#contact" className="underline">logistics enquiry</Link>.</li>
+-        </ul>
++      <p className="eyebrow">Store directory</p>
++      <h1 className="mt-5 max-w-4xl font-display text-5xl font-bold leading-[.95] tracking-[-.05em] md:text-8xl">Three stores.<br /><span className="text-[hsl(var(--accent))]">One route.</span></h1>
++      <p className="mt-8 max-w-xl text-base leading-7 text-[hsl(var(--muted-foreground))]">WORSTART GLOBAL is organised into three commerce destinations. One is open today; the other two are in preparation and handled by request.</p>
++
++      <div className="mt-16 border-t border-[hsl(var(--border))]">
++        {destinations.map((d, i) => {
++          const open = d.live || !!d.external;
++          return (
++            <section key={d.id} id={d.id} aria-labelledby={`h-${d.id}`} className={`grid scroll-mt-28 gap-6 border-b border-[hsl(var(--border))] py-10 md:py-14 lg:grid-cols-12 lg:gap-10 ${i === 1 ? 'lg:[&>div:first-child]:col-start-2' : ''}`}>
++              <div className="lg:col-span-7">
++                <div className="flex items-center gap-4"><span className="font-mono-ui text-xs text-[hsl(var(--accent))]">{d.n}</span>{open ? <Badge tone="ok">Open</Badge> : <Badge tone="warn">Coming soon</Badge>}</div>
++                <h2 id={`h-${d.id}`} className="mt-5 font-display text-4xl font-bold leading-[1] tracking-[-.04em] md:text-6xl">{d.name}</h2>
++                <p className="mt-4 font-display text-xl text-[hsl(var(--muted-foreground))] md:text-2xl">{d.line}</p>
++              </div>
++              <div className="lg:col-span-5 lg:pt-3">
++                <p className="text-sm leading-6 text-[hsl(var(--muted-foreground))]">{d.body}</p>
++                <div className="mt-6 flex flex-wrap gap-3">
++                  {open && d.id === 'general' && <StoreLink className="button-primary">Visit the General Store</StoreLink>}
++                  {open && d.id !== 'general' && <a href={d.external} target="_blank" rel="noopener noreferrer" className="button-primary">Visit the store<span className="sr-only"> (opens in a new tab)</span></a>}
++                  {d.actions.map((a) => <Button key={a.label} variant={a.kind === 'primary' && !open ? 'primary' : 'secondary'} onClick={() => openEnquiry({ service: a.service, description: `${a.label}:\n` })}>{a.label}</Button>)}
++                </div>
++                {!d.live && <p className="mt-4 text-xs leading-5 text-[hsl(var(--muted-foreground))]">Requests are sent to our team by email. They are not connected to inventory or a checkout, and no price or availability is implied.</p>}
++              </div>
++            </section>
++          );
++        })}
+       </div>
++      <p className="mt-10 max-w-2xl text-sm leading-6 text-[hsl(var(--muted-foreground))]">Shipping goods or vehicles internationally? That is a separate service: <Link href="/#contact" className="text-[hsl(var(--accent))] underline">start a logistics enquiry</Link>.</p>
+     </div></Layout>
+   );
+ }
+@@ -27,7 +51,7 @@ export function Orders() {
+   return (
+     <Layout><div className="page-shell container-wide max-w-3xl">
+       <SectionHeader eyebrow="Orders" title="Where are my orders?" body="Store orders are managed by Shopify. Freight and logistics requests are answered by email after you submit an enquiry." />
+-      <div className="mt-8 flex flex-wrap gap-3"><StoreLink className="button-primary">Shop the Store</StoreLink><Link href="/#tracking" className="button-secondary">Shipment visibility</Link></div>
++      <div className="mt-8 flex flex-wrap gap-3"><StoreLink className="button-primary">Visit the General Store</StoreLink><Link href="/#tracking" className="button-secondary">Shipment visibility</Link></div>
+     </div></Layout>
+   );
+ }
+-- 
+2.43.0
+
+
+From aa4bbcbf7b3296801cc3f2c0fcce96e2eeece133 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 31 Oct 2026 12:22:30 +0000
+Subject: [PATCH 3/4] Shorten homepage: move detailed service journeys to
+ /services, drop repetitive sections, hash-scroll on navigation
+
+---
+ artifacts/website/src/App.tsx                 | 73 ++++---------------
+ .../website/src/components/site/layout.tsx    | 16 +++-
+ artifacts/website/src/pages/services.tsx      | 18 +++++
+ artifacts/website/src/pages/store.tsx         |  2 +-
+ 4 files changed, 46 insertions(+), 63 deletions(-)
+ create mode 100644 artifacts/website/src/pages/services.tsx
+
+diff --git a/artifacts/website/src/App.tsx b/artifacts/website/src/App.tsx
+index 7581954..4cf0f61 100644
+--- a/artifacts/website/src/App.tsx
++++ b/artifacts/website/src/App.tsx
+@@ -25,8 +25,9 @@ import { Layout, BrandMark } from '@/components/site/layout';
+ import Shop, { Orders, Seller } from '@/pages/store';
+ import { Visa, VisaRequest, Appointments } from '@/pages/visa';
+ import Dashboard from '@/pages/dashboard';
++import Services from '@/pages/services';
+ import { EnquiryModal } from '@/components/site/enquiry';
+-import { ImportExportSection, CarsSection, LogisticsSection, TrackingSection, CommerceSection, VisaSection, EcosystemStatus, StoreSection, LimitsSection } from '@/components/site/sections';
++import { StoreSection, LimitsSection } from '@/components/site/sections';
+ import { ENQUIRY_EVENT, openEnquiry, type EnquiryPreset } from '@/lib/config';
+ import {
+   Route as WouterRoute,
+@@ -415,10 +416,17 @@ function Home() {
+           </div>
+         </section>
+ 
+-        <ImportExportSection />
+-        <CarsSection />
+-        <LogisticsSection />
+-        <TrackingSection />
++
++        <section className="bg-[hsl(var(--background))] pb-20 md:pb-28" aria-labelledby="explore-title">
++          <div className="container-wide">
++            <h2 id="explore-title" className="eyebrow">Explore the services</h2>
++            <ul className="mt-6 border-t border-[hsl(var(--border))]">
++              {[['Import & export', '/services#import-export'], ['Cars: sourcing, import, export', '/services#cars'], ['Freight, fulfillment & customs', '/services#logistics'], ['Shipment visibility', '/services#tracking'], ['Visa assistance & appointments', '/visa']].map(([l, h]) => (
++                <li key={l} className="border-b border-[hsl(var(--border))]"><a href={h} className="group flex items-center justify-between gap-6 py-5 font-display text-2xl font-bold tracking-[-.02em] transition-colors hover:text-[hsl(var(--accent))] md:text-4xl">{l}<ArrowUpRight className="h-6 w-6 shrink-0 text-[hsl(var(--accent))] transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" /></a></li>
++              ))}
++            </ul>
++          </div>
++        </section>
+ 
+         <section id="markets" className="relative overflow-hidden bg-[hsl(var(--primary))] py-20 text-[hsl(var(--primary-foreground))] md:py-28 lg:py-32">
+           <div className="markets-orbit markets-orbit-large absolute right-[-10%] top-[-18%] h-[520px] w-[520px] rounded-full" />
+@@ -491,10 +499,7 @@ function Home() {
+           </div>
+         </section>
+ 
+-        <EcosystemStatus />
+         <StoreSection />
+-        <CommerceSection />
+-        <VisaSection />
+         <LimitsSection />
+ 
+         <section id="approach" className="page-grid bg-[hsl(var(--secondary))] py-20 md:py-28 lg:py-32">
+@@ -529,27 +534,6 @@ function Home() {
+           </div>
+         </section>
+ 
+-        <section className="bg-[hsl(var(--primary))] py-20 text-[hsl(var(--primary-foreground))] md:py-24">
+-          <div className="container-wide">
+-            <div className="flex flex-col justify-between gap-8 md:flex-row md:items-end">
+-              <div>
+-                <p className="eyebrow">Operating principles</p>
+-                <h2 className="mt-5 max-w-2xl font-display text-4xl font-bold leading-[.98] tracking-[-.05em] md:text-6xl">The standards behind a clearer move.</h2>
+-              </div>
+-              <p className="max-w-xs text-sm leading-6 text-[hsl(var(--primary-foreground)/.62)]">Principles, not performance claims. The details of each movement still need to be confirmed.</p>
+-            </div>
+-            <div className="principles-grid mt-14 border-t border-[hsl(var(--primary-foreground)/.18)]">
+-              {principles.map((principle) => (
+-                <article key={principle.number} className="principle-card">
+-                  <span className="font-mono-ui text-xs text-[hsl(var(--accent))]">{principle.number}</span>
+-                  <h3 className="mt-8 font-display text-2xl font-bold tracking-[-.03em]">{principle.title}</h3>
+-                  <p className="mt-4 text-sm leading-6 text-[hsl(var(--primary-foreground)/.62)]">{principle.body}</p>
+-                </article>
+-              ))}
+-            </div>
+-          </div>
+-        </section>
+-
+         <section className="bg-[hsl(var(--background))] py-20 md:py-28 lg:py-32">
+           <div className="container-wide">
+             <div className="grid gap-10 lg:grid-cols-[.9fr_1.1fr] lg:items-center lg:gap-24">
+@@ -582,36 +566,6 @@ function Home() {
+           </div>
+         </section>
+ 
+-        <section className="bg-[hsl(var(--secondary))] py-20 md:py-28 lg:py-32">
+-          <div className="container-wide">
+-            <div className="grid gap-10 lg:grid-cols-[.72fr_1.28fr] lg:items-end lg:gap-24">
+-              <div>
+-                <p className="eyebrow">Example shipment view / non-live</p>
+-                <h2 className="mt-5 max-w-lg font-display text-4xl font-bold leading-[.98] tracking-[-.05em] text-[hsl(var(--foreground))] md:text-6xl">A clearer view of what matters next.</h2>
+-                <p className="mt-7 max-w-md text-sm leading-6 text-[hsl(var(--muted-foreground))]">An illustrative workflow panel showing the information a route conversation should keep in view. It is not connected to a shipment or backend.</p>
+-              </div>
+-              <div className="shipment-panel rounded-[1.75rem] bg-[hsl(var(--background))] p-5 shadow-[0_20px_70px_rgba(30,48,68,.1)] md:p-8">
+-                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[hsl(var(--border))] pb-5">
+-                  <div><span className="field-label">Illustrative workflow</span><h3 className="mt-2 font-display text-2xl font-bold text-[hsl(var(--foreground))]">Route context / sample</h3></div>
+-                  <span className="workflow-badge"><span />Not live</span>
+-                </div>
+-                <div className="shipment-route-bar mt-6">
+-                  <div><span className="field-label">Origin</span><strong>Algeria</strong></div>
+-                  <div className="shipment-route-line"><span /><span /><span /></div>
+-                  <div className="text-right"><span className="field-label">Destination</span><strong>European Union</strong></div>
+-                </div>
+-                <div className="shipment-detail-grid mt-8">
+-                  <div><span className="field-label">Cargo / service need</span><strong>Example cargo context</strong></div>
+-                  <div><span className="field-label">Current stage</span><strong>Route brief</strong></div>
+-                  <div><span className="field-label">Documents</span><strong><Check className="mr-2 inline h-4 w-4 text-[hsl(var(--accent))]" />Information to review</strong></div>
+-                  <div><span className="field-label">Next handoff</span><strong>Confirmation required</strong></div>
+-                </div>
+-                <div className="mt-8 border-t border-[hsl(var(--border))] pt-5 text-xs leading-5 text-[hsl(var(--muted-foreground))]">Sample content only. A real movement would be shaped around confirmed cargo, documents, route and partner details.</div>
+-              </div>
+-            </div>
+-          </div>
+-        </section>
+-
+         <section className="bg-[hsl(var(--background))] py-20 md:py-28 lg:py-32">
+           <div className="container-wide">
+             <div className="grid items-end gap-10 md:grid-cols-[1fr_auto]">
+@@ -667,6 +621,7 @@ function Router() {
+       <Switch>
+         <WouterRoute path="/" component={Home} />
+         <WouterRoute path="/shop" component={Shop} />
++        <WouterRoute path="/services" component={Services} />
+         <WouterRoute path="/products">{() => <Redirect to="/shop" />}</WouterRoute>
+         <WouterRoute path="/product/:id">{() => <Redirect to="/shop" />}</WouterRoute>
+         <WouterRoute path="/cart">{() => <Redirect to="/shop" />}</WouterRoute>
+diff --git a/artifacts/website/src/components/site/layout.tsx b/artifacts/website/src/components/site/layout.tsx
+index 8652195..43c5b8d 100644
+--- a/artifacts/website/src/components/site/layout.tsx
++++ b/artifacts/website/src/components/site/layout.tsx
+@@ -14,10 +14,10 @@ export function BrandMark({ light = false }: { light?: boolean }) {
+   );
+ }
+ 
+-const desktop = [['Overview', '/'], ['Services', '/#capabilities'], ['Import & Export', '/#import-export'], ['Ecosystem', '/#ecosystem'], ['Network', '/#markets'], ['How it works', '/#approach']];
++const desktop = [['Overview', '/'], ['Services', '/services'], ['Import & Export', '/services#import-export'], ['Ecosystem', '/#ecosystem'], ['Network', '/#markets'], ['How it works', '/#approach']];
+ const mobile = [...desktop, ['Stores', '/shop'], ['Visa services', '/visa'], ['Appointments', '/appointments'], ['Dashboard', '/dashboard']];
+ const footerCols: [string, [string, string][]][] = [
+-  ['Logistics', [['Import & export', '/#import-export'], ['Cars', '/#cars'], ['Freight & fulfillment', '/#logistics'], ['Tracking', '/#tracking']]],
++  ['Logistics', [['Import & export', '/services#import-export'], ['Cars', '/services#cars'], ['Freight & fulfillment', '/services#logistics'], ['Tracking', '/services#tracking']]],
+   ['Stores', [['Store directory', '/shop'], ['General Store', '/shop#general'], ['Auto', '/shop#auto'], ['Machinery', '/shop#machinery'], ['Seller', '/seller']]],
+   ['Services', [['Visa assistance', '/visa'], ['Appointments', '/appointments'], ['Dashboard', '/dashboard']]],
+ ];
+@@ -35,7 +35,17 @@ export function Layout({ children }: { children: ReactNode }) {
+   const btn = useRef<HTMLButtonElement>(null);
+   const first = useRef<HTMLAnchorElement>(null);
+ 
+-  useEffect(() => { setOpen(false); if (!window.location.hash) window.scrollTo(0, 0); }, [loc]);
++  useEffect(() => {
++    setOpen(false);
++    const id = decodeURIComponent(window.location.hash.slice(1));
++    if (!id) { window.scrollTo(0, 0); return; }
++    let tries = 0;
++    const t = window.setInterval(() => {
++      const el = document.getElementById(id);
++      if (el) { el.scrollIntoView(); window.clearInterval(t); } else if (++tries > 20) window.clearInterval(t);
++    }, 60);
++    return () => window.clearInterval(t);
++  }, [loc]);
+   useEffect(() => {
+     const on = () => setScrolled(window.scrollY > 28); on();
+     window.addEventListener('scroll', on, { passive: true }); return () => window.removeEventListener('scroll', on);
+diff --git a/artifacts/website/src/pages/services.tsx b/artifacts/website/src/pages/services.tsx
+new file mode 100644
+index 0000000..faec87a
+--- /dev/null
++++ b/artifacts/website/src/pages/services.tsx
+@@ -0,0 +1,18 @@
++import { Layout } from '@/components/site/layout';
++import { ImportExportSection, CarsSection, LogisticsSection, TrackingSection, CommerceSection, EcosystemStatus } from '@/components/site/sections';
++
++/** Detailed service journeys, kept off the homepage so the homepage stays short and editorial. */
++export default function Services() {
++  return (
++    <Layout>
++      <div className="pt-28 md:pt-32">
++        <ImportExportSection />
++        <CarsSection />
++        <LogisticsSection />
++        <TrackingSection />
++        <CommerceSection />
++        <div className="pt-20"><EcosystemStatus /></div>
++      </div>
++    </Layout>
++  );
++}
+diff --git a/artifacts/website/src/pages/store.tsx b/artifacts/website/src/pages/store.tsx
+index 636491b..121b17b 100644
+--- a/artifacts/website/src/pages/store.tsx
++++ b/artifacts/website/src/pages/store.tsx
+@@ -51,7 +51,7 @@ export function Orders() {
+   return (
+     <Layout><div className="page-shell container-wide max-w-3xl">
+       <SectionHeader eyebrow="Orders" title="Where are my orders?" body="Store orders are managed by Shopify. Freight and logistics requests are answered by email after you submit an enquiry." />
+-      <div className="mt-8 flex flex-wrap gap-3"><StoreLink className="button-primary">Visit the General Store</StoreLink><Link href="/#tracking" className="button-secondary">Shipment visibility</Link></div>
++      <div className="mt-8 flex flex-wrap gap-3"><StoreLink className="button-primary">Visit the General Store</StoreLink><Link href="/services#tracking" className="button-secondary">Shipment visibility</Link></div>
+     </div></Layout>
+   );
+ }
+-- 
+2.43.0
+
+
+From 7dbc8959215be5dad7267d3e06c156920f0b5bda Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 15 Nov 2026 10:49:29 +0000
+Subject: [PATCH 4/4] Light professional theme: white/navy/orange system,
+ Inter, photo-ready hero and alternating service sections, Trusted By (real
+ logos only), remove decorative graphics
+
+---
+ artifacts/website/src/App.tsx                 | 192 ++----------------
+ artifacts/website/src/components/site/ds.tsx  |   4 +-
+ .../website/src/components/site/media.tsx     |  31 +++
+ .../website/src/components/site/sections.tsx  |  41 ++++
+ artifacts/website/src/content/images.ts       |   9 +
+ artifacts/website/src/content/trusted-by.ts   |   6 +
+ artifacts/website/src/index.css               | 113 ++++++++---
+ 7 files changed, 190 insertions(+), 206 deletions(-)
+ create mode 100644 artifacts/website/src/components/site/media.tsx
+ create mode 100644 artifacts/website/src/content/images.ts
+ create mode 100644 artifacts/website/src/content/trusted-by.ts
+
+diff --git a/artifacts/website/src/App.tsx b/artifacts/website/src/App.tsx
+index 4cf0f61..61b0e2a 100644
+--- a/artifacts/website/src/App.tsx
++++ b/artifacts/website/src/App.tsx
+@@ -26,8 +26,9 @@ import Shop, { Orders, Seller } from '@/pages/store';
+ import { Visa, VisaRequest, Appointments } from '@/pages/visa';
+ import Dashboard from '@/pages/dashboard';
+ import Services from '@/pages/services';
++import { Photo, TrustedBy, hasPhoto } from '@/components/site/media';
+ import { EnquiryModal } from '@/components/site/enquiry';
+-import { StoreSection, LimitsSection } from '@/components/site/sections';
++import { ServiceFeatures, StoreSection, LimitsSection } from '@/components/site/sections';
+ import { ENQUIRY_EVENT, openEnquiry, type EnquiryPreset } from '@/lib/config';
+ import {
+   Route as WouterRoute,
+@@ -152,67 +153,11 @@ const coordinationItems = [
+   'Partner and carrier confirmation',
+ ];
+ 
+-function NetworkGraphic() {
+-  const positions = [
+-    'left-[12%] top-[38%]',
+-    'left-[49%] top-[16%]',
+-    'right-[8%] top-[28%]',
+-    'left-[30%] bottom-[25%]',
+-    'right-[20%] bottom-[12%]',
+-    'left-[10%] bottom-[8%]',
+-  ];
+-
+-  return (
+-    <div
+-      className="network-graphic relative mx-auto aspect-square w-full max-w-[480px]"
+-      role="img"
+-      aria-label="Abstract network of WORSTART SHIPPING lanes"
+-    >
+-      <div className="network-ring network-ring-outer absolute inset-[7%] rounded-full" />
+-      <div className="network-ring network-ring-mid absolute inset-[21%] rounded-full" />
+-      <div className="network-ring network-ring-inner absolute inset-[36%] rounded-full" />
+-      <div className="hero-orbit absolute inset-[3%] rounded-[50%]" />
+-      <div className="hero-orbit-slow absolute inset-[14%] rounded-[50%]" />
+-      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 500 500" fill="none" aria-hidden="true">
+-        <path d="M93 335C138 248 161 134 263 120C336 110 356 184 421 173" stroke="hsl(var(--accent) / .8)" strokeWidth="1.5" className="route-dash" />
+-        <path d="M78 193C177 197 211 311 308 358C358 382 385 315 433 277" stroke="hsl(var(--foreground) / .38)" strokeWidth="1.2" className="route-dash" />
+-        <path d="M145 419C181 355 208 276 179 197C165 157 133 141 109 100" stroke="hsl(var(--foreground) / .25)" strokeWidth="1.2" className="route-dash" />
+-        <path d="M261 120C281 207 326 254 421 173" stroke="hsl(var(--accent) / .35)" strokeWidth="1" />
+-        <path d="M179 197C245 189 278 195 308 358" stroke="hsl(var(--foreground) / .22)" strokeWidth="1" />
+-      </svg>
+-      {markets.map((market, index) => (
+-        <div
+-          className={`network-node absolute ${positions[index]} group`}
+-          key={market.code}
+-          data-testid={`market-node-${market.code}`}
+-        >
+-          <div className="network-node-dot relative flex items-center justify-center rounded-full border border-[hsl(var(--accent))] bg-[hsl(var(--background))] font-mono-ui font-medium text-[hsl(var(--foreground))] shadow-[0_0_0_7px_hsl(var(--background)/.72)] transition-transform duration-300 group-hover:scale-110">
+-            {market.code}
+-            <span className="absolute inset-1.5 rounded-full border border-[hsl(var(--accent)/.25)]" />
+-          </div>
+-          <span className="market-name absolute left-1/2 top-full mt-2 -translate-x-1/2 font-mono-ui uppercase text-[hsl(var(--muted-foreground))]">
+-            {market.name}
+-          </span>
+-        </div>
+-      ))}
+-      <div className="network-core absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full bg-[hsl(var(--primary))] text-center text-[hsl(var(--primary-foreground))] shadow-[0_16px_38px_rgba(30,48,68,.2)]">
+-        <span className="font-display text-2xl font-bold leading-none">W</span>
+-        <span className="mt-2 font-mono-ui text-[0.53rem] uppercase tracking-[.14em] text-[hsl(var(--primary-foreground)/.7)]">shipping link</span>
+-      </div>
+-      <div className="network-status absolute flex items-center gap-2 bg-[hsl(var(--accent))] font-mono-ui uppercase text-[hsl(var(--accent-foreground))]">
+-        <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--accent-foreground))]" />
+-        Illustrative network
+-      </div>
+-    </div>
+-  );
+-}
+-
+ function Home() {
+   const [menuOpen, setMenuOpen] = useState(false);
+   const [enquiry, setEnquiry] = useState<EnquiryPreset | null>(null);
+   const contactOpen = enquiry !== null;
+   const [headerScrolled, setHeaderScrolled] = useState(false);
+-  const [activeCapability, setActiveCapability] = useState<string | null>(null);
+   const menuButtonRef = useRef<HTMLButtonElement>(null);
+   const firstMenuItemRef = useRef<HTMLAnchorElement>(null);
+ 
+@@ -330,103 +275,29 @@ function Home() {
+     <Layout>
+ 
+       <div id="top">
+-        <section className="page-grid hero-section relative flex items-center overflow-hidden border-b border-[hsl(var(--border))]">
+-          <div className="container-wide relative z-10 grid w-full items-center gap-8 lg:grid-cols-[1.03fr_.97fr] lg:gap-5">
+-            <div className="hero-copy max-w-[680px]">
+-              <div className="fade-up flex items-center gap-3">
+-                <span className="h-px w-10 bg-[hsl(var(--accent))]" />
+-                  <p className="eyebrow">International freight &amp; logistics</p>
+-              </div>
+-              <h1 className="fade-up delay-1 mt-7 max-w-[14ch] text-balance font-display font-bold leading-[.89] tracking-[-.065em] text-[hsl(var(--foreground))]">
+-                 <span className="block">Goods move.</span>
+-                 <span className="hero-title-accent block text-[hsl(var(--accent))]">We make the route.</span>
+-              </h1>
+-              <p className="fade-up delay-2 mt-7 max-w-[510px] text-[1.02rem] leading-7 text-[hsl(var(--muted-foreground))]">
+-                  WORSTART SHIPPING brings route clarity to freight, fulfillment, documentation and shipment visibility across the markets your business depends on.
+-              </p>
+-              <div className="fade-up delay-3 mt-8 flex flex-col items-stretch gap-4 sm:flex-row sm:items-center">
+-                <a href="#contact" className="button-primary group" data-testid="link-hero-contact">
+-                   Start a logistics enquiry
+-                  <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+-                </a>
+-                <a href="#markets" className="link-arrow inline-flex min-h-12 items-center gap-3 text-sm font-semibold text-[hsl(var(--foreground))]" data-testid="link-hero-markets">
+-                   Explore our lanes <ArrowRight className="h-4 w-4 text-[hsl(var(--accent))]" />
+-                </a>
++        <section className="hero-section">
++          <div className="container-wide grid items-center gap-12 lg:grid-cols-[1.1fr_.9fr] lg:gap-16">
++            <div className="hero-copy">
++              <p className="eyebrow">International freight &amp; logistics</p>
++              <h1 className="mt-5 text-balance font-display">Goods move. We make the route.</h1>
++              <p className="mt-6">WORSTART GLOBAL coordinates freight, import and export, vehicles, fulfillment and customs support across the markets your business depends on.</p>
++              <div className="mt-9 flex flex-col items-stretch gap-4 sm:flex-row sm:items-center">
++                <button type="button" onClick={() => openEnquiry()} className="button-primary" data-testid="link-hero-contact">Get a quote <ArrowUpRight className="h-4 w-4" /></button>
++                <a href="/services" className="button-secondary" data-testid="link-hero-markets">Explore services</a>
+               </div>
+             </div>
+-            <div className="fade-up delay-2 hero-graphic-wrap flex w-full justify-center lg:justify-end">
+-              <NetworkGraphic />
+-            </div>
+-          </div>
+-          <div className="absolute bottom-5 left-5 hidden items-center gap-3 md:flex">
+-            <span className="font-mono-ui text-[0.57rem] uppercase tracking-[.14em] text-[hsl(var(--muted-foreground))]">Scroll to navigate</span>
+-            <ChevronDown className="h-4 w-4 animate-bounce text-[hsl(var(--accent))]" />
+-          </div>
+-          <span className="absolute right-5 top-1/2 hidden -rotate-90 font-mono-ui text-[0.57rem] uppercase tracking-[.2em] text-[hsl(var(--muted-foreground))] lg:block">WS / 001</span>
+-        </section>
+-
+-        <section className="ecosystem-strip border-b border-[hsl(var(--border))] bg-[hsl(var(--background))]">
+-          <div className="container-wide flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:gap-8">
+-            <span className="font-mono-ui text-[0.6rem] uppercase tracking-[.16em] text-[hsl(var(--accent))]">Connected by WORSTART</span>
+-            <div className="ecosystem-marquee" aria-label="WORSTART ecosystem labels">
+-              <div className="ecosystem-marquee-track">
+-                <span>Bank Online</span><i>·</i><span>DZ Seller</span><i>·</i><span>Car Leasing &amp; Booking</span><i>·</i><span>Future Maritime</span>
+-                <span aria-hidden="true">Bank Online</span><i aria-hidden="true">·</i><span aria-hidden="true">DZ Seller</span><i aria-hidden="true">·</i><span aria-hidden="true">Car Leasing &amp; Booking</span><i aria-hidden="true">·</i><span aria-hidden="true">Future Maritime</span>
++            {hasPhoto('hero') ? <Photo id="hero" priority className="aspect-[4/5]" /> : (
++              <div aria-label="Markets served">
++                <p className="text-base font-semibold text-[hsl(var(--foreground))]">Markets served</p>
++                <ul className="mt-3 border-t border-[hsl(var(--border))]">{['Algeria', 'China', 'Europe', 'Türkiye', 'UAE', 'USA'].map((m) => <li key={m} className="border-b border-[hsl(var(--border))] py-3 text-3xl font-bold tracking-[-.02em] text-[hsl(var(--foreground))] md:text-4xl">{m}</li>)}</ul>
+               </div>
+-            </div>
+-          </div>
+-        </section>
+-
+-        <section id="capabilities" className="bg-[hsl(var(--background))] py-20 md:py-28 lg:py-32">
+-          <div className="container-wide">
+-            <div className="section-heading grid gap-8 lg:grid-cols-[.75fr_1.25fr]">
+-              <div>
+-                <p className="eyebrow">Services / built around the handoff</p>
+-                <h2 className="mt-5 max-w-md font-display text-4xl font-bold leading-[1.02] tracking-[-.04em] text-[hsl(var(--foreground))] md:text-5xl">The work between origin and arrival.</h2>
+-              </div>
+-              <div className="max-w-xl lg:pt-10">
+-                <p className="text-lg leading-8 text-[hsl(var(--muted-foreground))]">A logistics route is more than distance. It is the information, people, documents and next handoffs that make movement easier to understand.</p>
+-              </div>
+-            </div>
+-            <div className="capability-grid mt-14 md:mt-16">
+-              {capabilities.map((capability) => {
+-                const Icon = capability.icon;
+-                const expanded = activeCapability === capability.number;
+-                return (
+-                  <article key={capability.number} className={`service-card ${expanded ? 'service-card-expanded' : ''}`} data-testid={`card-capability-${capability.number}`}>
+-                    <div className="flex items-center justify-between">
+-                      <span className="font-mono-ui text-xs text-[hsl(var(--accent))]" data-testid={`text-capability-number-${capability.number}`}>{capability.number}</span>
+-                      <span className="service-icon flex h-10 w-10 items-center justify-center border border-[hsl(var(--border))] text-[hsl(var(--foreground)/.65)]">
+-                        <Icon className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+-                      </span>
+-                    </div>
+-                    <h3 className="mt-8 font-display text-2xl font-bold tracking-[-.03em] text-[hsl(var(--foreground))]" data-testid={`text-capability-title-${capability.number}`}>{capability.title}</h3>
+-                    <p className="mt-4 text-sm leading-6 text-[hsl(var(--muted-foreground))]">{capability.body}</p>
+-                    <ul className="service-bullets mt-6 space-y-3">
+-                      {capability.bullets.map((bullet) => <li key={bullet}><span />{bullet}</li>)}
+-                    </ul>
+-                    <button type="button" className="service-detail-toggle mt-7" onClick={() => setActiveCapability(expanded ? null : capability.number)} aria-expanded={expanded}>
+-                      {expanded ? 'Close detail' : 'Learn more'} <ArrowUpRight className="h-3.5 w-3.5" />
+-                    </button>
+-                    {expanded && <p className="service-detail mt-4 border-t border-[hsl(var(--border))] pt-4 text-xs leading-5 text-[hsl(var(--muted-foreground))]">This is an intended operating model. Specific partner, carrier and service details are confirmed for each movement.</p>}
+-                  </article>
+-                );
+-              })}
+-            </div>
++            )}
+           </div>
+         </section>
+ 
++        <TrustedBy />
+ 
+-        <section className="bg-[hsl(var(--background))] pb-20 md:pb-28" aria-labelledby="explore-title">
+-          <div className="container-wide">
+-            <h2 id="explore-title" className="eyebrow">Explore the services</h2>
+-            <ul className="mt-6 border-t border-[hsl(var(--border))]">
+-              {[['Import & export', '/services#import-export'], ['Cars: sourcing, import, export', '/services#cars'], ['Freight, fulfillment & customs', '/services#logistics'], ['Shipment visibility', '/services#tracking'], ['Visa assistance & appointments', '/visa']].map(([l, h]) => (
+-                <li key={l} className="border-b border-[hsl(var(--border))]"><a href={h} className="group flex items-center justify-between gap-6 py-5 font-display text-2xl font-bold tracking-[-.02em] transition-colors hover:text-[hsl(var(--accent))] md:text-4xl">{l}<ArrowUpRight className="h-6 w-6 shrink-0 text-[hsl(var(--accent))] transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" /></a></li>
+-              ))}
+-            </ul>
+-          </div>
+-        </section>
++        <ServiceFeatures />
+ 
+         <section id="markets" className="relative overflow-hidden bg-[hsl(var(--primary))] py-20 text-[hsl(var(--primary-foreground))] md:py-28 lg:py-32">
+           <div className="markets-orbit markets-orbit-large absolute right-[-10%] top-[-18%] h-[520px] w-[520px] rounded-full" />
+@@ -536,22 +407,8 @@ function Home() {
+ 
+         <section className="bg-[hsl(var(--background))] py-20 md:py-28 lg:py-32">
+           <div className="container-wide">
+-            <div className="grid gap-10 lg:grid-cols-[.9fr_1.1fr] lg:items-center lg:gap-24">
+-              <div className="coordinate-visual page-grid relative min-h-[360px] overflow-hidden border border-[hsl(var(--border))] p-7 md:min-h-[420px] md:p-10">
+-                <div className="coordinate-orbit coordinate-orbit-one" />
+-                <div className="coordinate-orbit coordinate-orbit-two" />
+-                <div className="coordinate-route route-route-one" />
+-                <div className="coordinate-route route-route-two" />
+-                <div className="coordinate-center">
+-                  <span className="font-mono-ui text-[0.55rem] uppercase tracking-[.15em]">W / coordination</span>
+-                  <strong className="mt-3 font-display text-3xl">Next<br />handoff</strong>
+-                </div>
+-                <span className="coordinate-chip coordinate-chip-origin">Origin context</span>
+-                <span className="coordinate-chip coordinate-chip-docs">Documents</span>
+-                <span className="coordinate-chip coordinate-chip-destination">Destination</span>
+-                <span className="absolute bottom-6 left-7 font-mono-ui text-[0.58rem] uppercase tracking-[.14em] text-[hsl(var(--muted-foreground))] md:left-10">Illustrative coordination view</span>
+-              </div>
+-              <div>
++            <div className="grid gap-10">
++              <div className="max-w-3xl">
+                 <p className="eyebrow">What we coordinate</p>
+                 <h2 className="mt-5 max-w-xl font-display text-4xl font-bold leading-[.98] tracking-[-.05em] text-[hsl(var(--foreground))] md:text-6xl">Less ambiguity between one move and the next.</h2>
+                 <p className="mt-7 max-w-xl text-lg leading-8 text-[hsl(var(--muted-foreground))]">The logistics layer is where cargo context, documents, service need and partner confirmation meet. We keep that conversation structured.</p>
+@@ -596,15 +453,6 @@ function Home() {
+                     Start a logistics enquiry <ArrowUpRight className="h-4 w-4" />
+                   </button>
+                 </div>
+-                <div className="contact-route-visual" aria-hidden="true">
+-                  <div className="contact-route-grid" />
+-                  <div className="contact-route-line contact-route-line-one" />
+-                  <div className="contact-route-line contact-route-line-two" />
+-                  <span className="contact-route-node contact-route-node-one">DZ</span>
+-                  <span className="contact-route-node contact-route-node-two">EU</span>
+-                  <span className="contact-route-node contact-route-node-three">CN</span>
+-                  <div className="contact-route-core"><span>W</span><small>next move</small></div>
+-                </div>
+               </div>
+             </div>
+           </div>
+diff --git a/artifacts/website/src/components/site/ds.tsx b/artifacts/website/src/components/site/ds.tsx
+index ce0d65f..0befe0c 100644
+--- a/artifacts/website/src/components/site/ds.tsx
++++ b/artifacts/website/src/components/site/ds.tsx
+@@ -7,7 +7,7 @@ export function Button({ variant = 'primary', icon = true, className = '', child
+ }
+ 
+ export function Badge({ tone = 'neutral', children }: { tone?: 'neutral' | 'accent' | 'warn' | 'ok' | 'danger'; children: ReactNode }) {
+-  const t = { neutral: 'border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))]', accent: 'border-[hsl(var(--accent))] text-[hsl(var(--accent))]', warn: 'border-amber-500/60 text-amber-400', ok: 'border-emerald-500/60 text-emerald-400', danger: 'border-[hsl(var(--destructive))] text-[hsl(var(--destructive))]' }[tone];
++  const t = { neutral: 'border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))]', accent: 'border-[hsl(var(--accent))] text-[hsl(var(--accent-ink))]', warn: 'border-amber-600/60 text-amber-800', ok: 'border-emerald-600/60 text-emerald-800', danger: 'border-[hsl(var(--destructive))] text-[hsl(var(--destructive))]' }[tone];
+   return <span className={`inline-flex items-center border px-2 py-1 font-mono-ui text-[0.55rem] uppercase tracking-[.12em] ${t}`}>{children}</span>;
+ }
+ 
+@@ -23,7 +23,7 @@ export function SectionHeader({ eyebrow, title, body }: { eyebrow: string; title
+ export const Card = ({ children, className = '' }: { children: ReactNode; className?: string }) => <div className={`card-ds p-6 ${className}`}>{children}</div>;
+ 
+ export function EmptyState({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
+-  return <div className="glass flex flex-col items-center px-6 py-14 text-center" role="status"><Inbox className="h-8 w-8 text-[hsl(var(--accent))]" strokeWidth={1.3} /><h2 className="mt-4 font-display text-2xl font-bold">{title}</h2><p className="mt-2 max-w-md text-sm leading-6 text-[hsl(var(--muted-foreground))]">{body}</p>{action && <div className="mt-6">{action}</div>}</div>;
++  return <div className="glass flex flex-col items-center px-6 py-14 text-center" role="status"><Inbox className="h-8 w-8 text-[hsl(var(--accent-ink))]" strokeWidth={1.3} /><h2 className="mt-4 font-display text-2xl font-bold">{title}</h2><p className="mt-2 max-w-md text-sm leading-6 text-[hsl(var(--muted-foreground))]">{body}</p>{action && <div className="mt-6">{action}</div>}</div>;
+ }
+ export const LoadingState = ({ label = 'Loading…' }: { label?: string }) => <div className="flex items-center justify-center gap-3 py-14 text-sm text-[hsl(var(--muted-foreground))]" role="status" aria-live="polite"><Loader2 className="h-4 w-4 animate-spin" />{label}</div>;
+ export const ErrorState = ({ title = 'Something went wrong', body, action }: { title?: string; body: string; action?: ReactNode }) => (
+diff --git a/artifacts/website/src/components/site/media.tsx b/artifacts/website/src/components/site/media.tsx
+new file mode 100644
+index 0000000..138caa0
+--- /dev/null
++++ b/artifacts/website/src/components/site/media.tsx
+@@ -0,0 +1,31 @@
++import { images, type PhotoKey } from '@/content/images';
++import { trustedBy } from '@/content/trusted-by';
++
++export const hasPhoto = (k: PhotoKey) => !!images[k];
++
++/** Renders a configured real photo, or nothing. Never a placeholder. */
++export function Photo({ id, className = '', priority = false }: { id: PhotoKey; className?: string; priority?: boolean }) {
++  const p = images[id];
++  if (!p) return null;
++  return (
++    <figure className={`photo-frame ${className}`}>
++      <img src={p.src} alt={p.alt} loading={priority ? 'eager' : 'lazy'} decoding="async" />
++      {p.credit && <figcaption className="sr-only">{p.credit}</figcaption>}
++    </figure>
++  );
++}
++
++/** Real logos only; hidden entirely until some are provided. */
++export function TrustedBy() {
++  if (trustedBy.length === 0) return null;
++  return (
++    <section aria-labelledby="trusted-title" className="border-y border-[hsl(var(--border))] bg-[hsl(var(--primary))] py-10">
++      <div className="container-wide">
++        <h2 id="trusted-title" className="text-base font-semibold text-[hsl(var(--foreground))]">Trusted by</h2>
++        <ul className="mt-6 flex flex-wrap items-center gap-x-12 gap-y-6">
++          {trustedBy.map((l) => <li key={l.name}>{l.href ? <a href={l.href} target="_blank" rel="noopener noreferrer"><img src={l.src} alt={l.name} className="h-9 w-auto opacity-80" loading="lazy" /></a> : <img src={l.src} alt={l.name} className="h-9 w-auto opacity-80" loading="lazy" />}</li>)}
++        </ul>
++      </div>
++    </section>
++  );
++}
+diff --git a/artifacts/website/src/components/site/sections.tsx b/artifacts/website/src/components/site/sections.tsx
+index 4d8c26a..5dd01c9 100644
+--- a/artifacts/website/src/components/site/sections.tsx
++++ b/artifacts/website/src/components/site/sections.tsx
+@@ -5,6 +5,8 @@ import {
+ } from 'lucide-react';
+ import { openEnquiry } from '@/lib/config';
+ import { StoreLink } from '@/components/site/store-link';
++import { Photo, hasPhoto } from '@/components/site/media';
++import type { PhotoKey } from '@/content/images';
+ import { lookupShipment, type TrackingResult } from '@/lib/tracking';
+ 
+ const Soon = ({ children = 'Coming soon' }: { children?: ReactNode }) => (
+@@ -327,3 +329,42 @@ export function LimitsSection() {
+     </section>
+   );
+ }
++
++
++/* ---------- HOME: alternating image/text service sections ---------- */
++const features: { id: string; photo: PhotoKey; title: string; body: string; points: string[]; cta: string; service: string; more: string }[] = [
++  { id: 'freight', photo: 'freight', title: 'Freight, coordinated end to end.', body: 'Air, sea and road freight arranged around your cargo, timeline and destination. Tell us the route and we reply with a proposal. Nothing is priced automatically.', points: ['Air, sea, road and multimodal freight', 'Full and partial container', 'Door-to-door and port-to-port', 'Quote by request'], cta: 'Get a quote', service: 'Commercial cargo', more: '/services#logistics' },
++  { id: 'import-export', photo: 'importExport', title: 'Import and export without the guesswork.', body: 'Supplier and buyer coordination, freight, shipping and customs documentation, and delivery, handled as one conversation instead of five.', points: ['Supplier and buyer coordination', 'Commercial and shipping documents', 'Customs support and delivery', 'Commercial and personal cargo'], cta: 'Start an enquiry', service: 'Import goods', more: '/services#import-export' },
++  { id: 'vehicles', photo: 'vehicles', title: 'Vehicles, sourced and shipped.', body: 'Vehicle sourcing and purchase assistance, documentation, international shipping, and port and customs coordination. We do not list inventory. Every vehicle is handled by request.', points: ['Sourcing and purchase assistance', 'Import and export of vehicles', 'International vehicle shipping', 'Port and customs coordination'], cta: 'Request a vehicle', service: 'Vehicle sourcing request', more: '/services#cars' },
++  { id: 'fulfillment', photo: 'warehouse', title: 'Fulfillment and customs support.', body: 'Receiving, storage, picking, packing and dispatch, with documentation coordination alongside. WORSTART is not a government authority and does not grant customs approvals.', points: ['Warehousing and inventory handling', 'Packing, dispatch and returns coordination', 'Documentation coordination', 'Warehouse locations confirmed per engagement'], cta: 'Ask about fulfillment', service: 'Fulfillment & warehousing', more: '/services#logistics' },
++];
++
++export function ServiceFeatures() {
++  return (
++    <div id="capabilities">
++      {features.map((f, i) => {
++        const photo = hasPhoto(f.photo);
++        const flip = i % 2 === 1;
++        return (
++          <section key={f.id} id={f.id} aria-labelledby={`f-${f.id}`} className={`py-20 md:py-28 ${i % 2 === 0 ? 'bg-white' : 'bg-[hsl(var(--primary))]'}`}>
++            <div className="container-wide grid items-center gap-10 lg:grid-cols-12 lg:gap-16">
++              {photo && <Photo id={f.photo} className={`aspect-[4/3] lg:col-span-6 ${flip ? 'lg:order-first' : 'lg:order-last'}`} />}
++              <div className={photo ? 'lg:col-span-6' : 'lg:col-span-7'}>
++                <p className="eyebrow">{String(i + 1).padStart(2, '0')}</p>
++                <h2 id={`f-${f.id}`} className="mt-4 max-w-xl text-4xl font-bold leading-[1.05] tracking-[-.025em] md:text-5xl">{f.title}</h2>
++                <p className="mt-5 max-w-xl text-lg leading-8">{f.body}</p>
++                {!photo && null}
++                <ul className="mt-6 max-w-xl space-y-2 text-base">{f.points.map((pt) => <li key={pt} className="flex gap-3"><span aria-hidden className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[hsl(var(--accent))]" />{pt}</li>)}</ul>
++                <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
++                  <button type="button" className="button-primary" onClick={() => openEnquiry({ service: f.service })}>{f.cta} <ArrowUpRight className="h-4 w-4" /></button>
++                  <a href={f.more} className="service-detail-toggle">Learn more</a>
++                </div>
++              </div>
++              {!photo && <div className="hidden lg:col-span-5 lg:block" aria-hidden><span className="block select-none text-[9rem] font-extrabold leading-none text-[hsl(var(--border))]">{String(i + 1).padStart(2, '0')}</span></div>}
++            </div>
++          </section>
++        );
++      })}
++    </div>
++  );
++}
+diff --git a/artifacts/website/src/content/images.ts b/artifacts/website/src/content/images.ts
+new file mode 100644
+index 0000000..268ed8c
+--- /dev/null
++++ b/artifacts/website/src/content/images.ts
+@@ -0,0 +1,9 @@
++/**
++ * Real photography only. Add files under public/images/ and register them here with alt text and the
++ * licence/credit. Anything left undefined simply doesn't render (layouts fall back to text) — no placeholders.
++ */
++export type PhotoKey = 'hero' | 'freight' | 'importExport' | 'vehicles' | 'warehouse';
++export interface PhotoEntry { src: string; alt: string; credit?: string }
++export const images: Partial<Record<PhotoKey, PhotoEntry>> = {
++  // hero: { src: '/images/hero.jpg', alt: 'Container ship loading at a port', credit: 'Photographer / licence URL' },
++};
+diff --git a/artifacts/website/src/content/trusted-by.ts b/artifacts/website/src/content/trusted-by.ts
+new file mode 100644
+index 0000000..087c34d
+--- /dev/null
++++ b/artifacts/website/src/content/trusted-by.ts
+@@ -0,0 +1,6 @@
++/**
++ * "Trusted by" logos. Only add REAL clients/partners who have given permission, with their logo file in
++ * public/images/logos/. While this list is empty the strip is not rendered — nothing is invented.
++ */
++export interface TrustedLogo { name: string; src: string; href?: string }
++export const trustedBy: TrustedLogo[] = [];
+diff --git a/artifacts/website/src/index.css b/artifacts/website/src/index.css
+index 93793b7..52d283a 100644
+--- a/artifacts/website/src/index.css
++++ b/artifacts/website/src/index.css
+@@ -1,4 +1,4 @@
+-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap');
++@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+ @import 'tailwindcss';
+ @import 'tw-animate-css';
+ 
+@@ -44,40 +44,42 @@
+ }
+ 
+ :root {
+-  color-scheme: dark;
+-  --background: 225 14% 6%;
+-  --foreground: 40 20% 96%;
+-  --border: 225 8% 20%;
+-  --input: 225 8% 20%;
+-  --ring: 16 85% 56%;
+-  --card: 225 12% 9%;
+-  --card-foreground: 40 20% 96%;
+-  --card-border: 225 8% 20%;
+-  --popover: 225 12% 9%;
+-  --popover-foreground: 40 20% 96%;
+-  --popover-border: 225 8% 20%;
+-  --primary: 225 14% 10%;
+-  --primary-foreground: 40 20% 96%;
+-  --secondary: 225 12% 9%;
+-  --secondary-foreground: 40 20% 96%;
+-  --muted: 225 10% 14%;
+-  --muted-foreground: 225 8% 66%;
+-  --accent: 16 85% 56%;
+-  --accent-foreground: 0 0% 100%;
+-  --destructive: 0 72% 60%;
++  color-scheme: light;
++  --background: 0 0% 100%;
++  --foreground: 222 47% 11%;            /* #0f172a deep navy: headings */
++  --body: 215 25% 27%;                  /* #334155 dark gray: body text */
++  --border: 214 32% 91%;
++  --input: 214 32% 85%;
++  --ring: 25 95% 53%;
++  --card: 0 0% 100%;
++  --card-foreground: 222 47% 11%;
++  --card-border: 214 32% 91%;
++  --popover: 0 0% 100%;
++  --popover-foreground: 222 47% 11%;
++  --popover-border: 214 32% 91%;
++  --primary: 210 40% 98%;               /* #f8fafc very light gray surface */
++  --primary-foreground: 222 47% 11%;
++  --secondary: 210 40% 98%;
++  --secondary-foreground: 222 47% 11%;
++  --muted: 210 40% 96%;
++  --muted-foreground: 215 25% 27%;
++  --accent: 25 95% 53%;                 /* #f97316 brand orange: CTAs and small accents only */
++  --accent-ink: 17 88% 40%;             /* darker orange for small text accents (contrast) */
++  --accent-foreground: 222 47% 11%;     /* navy text on orange: passes contrast */
++  --destructive: 0 72% 45%;
+   --destructive-foreground: 0 0% 100%;
+-  --sidebar: 225 14% 8%;
+-  --sidebar-foreground: 40 20% 96%;
+-  --sidebar-border: 225 8% 20%;
+-  --sidebar-primary: 16 85% 56%;
+-  --sidebar-primary-foreground: 0 0% 100%;
+-  --sidebar-accent: 225 10% 14%;
+-  --sidebar-accent-foreground: 40 20% 96%;
+-  --app-font-sans: 'DM Sans', sans-serif;
++  --sidebar: 210 40% 98%;
++  --sidebar-foreground: 222 47% 11%;
++  --sidebar-border: 214 32% 91%;
++  --sidebar-primary: 25 95% 53%;
++  --sidebar-primary-foreground: 222 47% 11%;
++  --sidebar-accent: 210 40% 96%;
++  --sidebar-accent-foreground: 222 47% 11%;
++  --app-font-sans: 'Inter', system-ui, sans-serif;
+   --app-font-serif: Georgia, serif;
+-  --app-font-mono: 'IBM Plex Mono', monospace;
++  --app-font-mono: 'Inter', system-ui, sans-serif;
+   --radius: 0.5rem;
+-  --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.45);
++  --shadow-soft: 0 12px 32px rgba(15, 23, 42, 0.08);
+ }
+ 
+ .dark {
+@@ -426,3 +428,50 @@ a.card-ds:hover, .card-ds-hover:hover { border-color: hsl(var(--accent) / .6); t
+   html { scroll-behavior: auto; }
+   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+ }
++
++
++/* ================= Light professional theme overrides ================= */
++html, body { background: #ffffff; color: hsl(var(--body)); font-family: var(--app-font-sans); font-size: 16px; }
++.font-display, .brand-name, .mobile-nav-link, .font-mono-ui, .eyebrow, .nav-link, .footer-link, .button-nav, .mobile-nav-cta, .service-detail-toggle, .field-label { font-family: var(--app-font-sans) !important; }
++h1, h2, h3, .font-display { color: hsl(var(--foreground)); }
++/* readable labels: no tiny all-caps */
++.uppercase { text-transform: none !important; }
++.eyebrow, .nav-link, .footer-link, .button-nav, .mobile-nav-cta, .service-detail-toggle, .field-label, .font-mono-ui, .mobile-navigation-footer { text-transform: none !important; letter-spacing: 0 !important; font-size: .9375rem !important; line-height: 1.3 !important; font-weight: 600; }
++.eyebrow { color: hsl(var(--accent-ink)); }
++[class*="text-[0.5"], [class*="text-[0.6"], [class*="text-[0.7"], [class*="text-xs"] { font-size: .875rem !important; }
++[class*="tracking-[.1"], [class*="tracking-[.2"] { letter-spacing: 0 !important; }
++.text-sm, p.text-sm, li.text-sm { font-size: 1rem; line-height: 1.65; }
++[class*="text-[hsl(var(--accent))]"] { color: hsl(var(--accent-ink)); }
++p, li, dd { color: hsl(var(--body)); }
++.brand-name { letter-spacing: .02em; font-size: 1.05rem; font-weight: 800; }
++.brand-name-light { color: hsl(var(--foreground)); }
++.brand-symbol-light { border-color: hsl(var(--foreground)); }
++.site-header { background: rgba(255,255,255,.92); -webkit-backdrop-filter: none; backdrop-filter: none; border-bottom: 1px solid hsl(var(--border)); }
++.site-header-scrolled { background: #fff; box-shadow: 0 6px 20px rgba(15,23,42,.06); }
++.mobile-panel { background: #fff; }
++.grain::after { display: none; }
++.glass, .card-ds { background: #fff; border: 1px solid hsl(var(--border)); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
++.page-grid, .hero-section { background: #fff; background-image: none; }
++.hero-section { min-height: 0; padding: 7.5rem 0 5rem; }
++.hero-section h1 { font-size: clamp(3rem, 7vw, 5.5rem); line-height: 1; letter-spacing: -.035em; font-weight: 800; max-width: 12ch; }
++.hero-title-accent { color: hsl(var(--foreground)) !important; }
++.hero-copy p, .hero-copy > p { font-size: 1.125rem !important; line-height: 1.7 !important; color: hsl(var(--body)); max-width: 34rem; }
++/* orange is for CTAs only: solid, no gradient, navy label */
++.button-primary, .mobile-nav-cta { background: hsl(var(--accent)); background-image: none; color: hsl(var(--accent-foreground)); font-weight: 700; font-size: 1rem; border-radius: .375rem; }
++.button-primary:hover, .mobile-nav-cta:hover { background: hsl(25 95% 47%); }
++.button-secondary { border: 1px solid hsl(var(--foreground)); color: hsl(var(--foreground)); background: #fff; border-radius: .375rem; font-size: 1rem; }
++.button-secondary:hover { background: hsl(var(--foreground)); color: #fff; }
++.button-cta-outline { border: 1px solid hsl(var(--foreground)); color: hsl(var(--foreground)); border-radius: .375rem; font-size: 1rem; }
++.button-cta-outline:hover { background: hsl(var(--foreground)); color: #fff; }
++.button-nav { background: hsl(var(--accent)); color: hsl(var(--accent-foreground)); border-radius: .375rem; font-weight: 700; }
++.nav-link, .footer-link { color: hsl(var(--body)); font-weight: 500; }
++.nav-link:hover, .footer-link:hover { color: hsl(var(--foreground)); text-decoration: underline; text-underline-offset: 4px; }
++.service-detail-toggle { color: hsl(var(--foreground)); text-decoration: underline; text-underline-offset: 4px; }
++.field-input { border: 1px solid hsl(var(--input)); border-radius: .375rem; padding: .75rem .875rem; font-size: 1rem; background: #fff; }
++.field-input:focus { border-color: hsl(var(--foreground)); box-shadow: 0 0 0 3px rgba(249,115,22,.25); }
++section + section { border-top: 0; }
++.photo-frame { position: relative; overflow: hidden; border-radius: .5rem; background: hsl(var(--muted)); }
++.photo-frame img { display: block; width: 100%; height: 100%; object-fit: cover; }
++
++small, .mobile-nav-link small { font-size: .875rem !important; }
++[class*="step"] span, .approach-step-number { font-size: .9375rem !important; }
+-- 
+2.43.0
+

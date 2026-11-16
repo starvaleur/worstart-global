@@ -7,7 +7,7 @@ export function Button({ variant = 'primary', icon = true, className = '', child
 }
 
 export function Badge({ tone = 'neutral', children }: { tone?: 'neutral' | 'accent' | 'warn' | 'ok' | 'danger'; children: ReactNode }) {
-  const t = { neutral: 'border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))]', accent: 'border-[hsl(var(--accent))] text-[hsl(var(--accent))]', warn: 'border-amber-500/60 text-amber-400', ok: 'border-emerald-500/60 text-emerald-400', danger: 'border-[hsl(var(--destructive))] text-[hsl(var(--destructive))]' }[tone];
+  const t = { neutral: 'border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))]', accent: 'border-[hsl(var(--accent))] text-[hsl(var(--accent-ink))]', warn: 'border-amber-600/60 text-amber-800', ok: 'border-emerald-600/60 text-emerald-800', danger: 'border-[hsl(var(--destructive))] text-[hsl(var(--destructive))]' }[tone];
   return <span className={`inline-flex items-center border px-2 py-1 font-mono-ui text-[0.55rem] uppercase tracking-[.12em] ${t}`}>{children}</span>;
 }
 
@@ -23,7 +23,7 @@ export function SectionHeader({ eyebrow, title, body }: { eyebrow: string; title
 export const Card = ({ children, className = '' }: { children: ReactNode; className?: string }) => <div className={`card-ds p-6 ${className}`}>{children}</div>;
 
 export function EmptyState({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
-  return <div className="glass flex flex-col items-center px-6 py-14 text-center" role="status"><Inbox className="h-8 w-8 text-[hsl(var(--accent))]" strokeWidth={1.3} /><h2 className="mt-4 font-display text-2xl font-bold">{title}</h2><p className="mt-2 max-w-md text-sm leading-6 text-[hsl(var(--muted-foreground))]">{body}</p>{action && <div className="mt-6">{action}</div>}</div>;
+  return <div className="glass flex flex-col items-center px-6 py-14 text-center" role="status"><Inbox className="h-8 w-8 text-[hsl(var(--accent-ink))]" strokeWidth={1.3} /><h2 className="mt-4 font-display text-2xl font-bold">{title}</h2><p className="mt-2 max-w-md text-sm leading-6 text-[hsl(var(--muted-foreground))]">{body}</p>{action && <div className="mt-6">{action}</div>}</div>;
 }
 export const LoadingState = ({ label = 'Loading…' }: { label?: string }) => <div className="flex items-center justify-center gap-3 py-14 text-sm text-[hsl(var(--muted-foreground))]" role="status" aria-live="polite"><Loader2 className="h-4 w-4 animate-spin" />{label}</div>;
 export const ErrorState = ({ title = 'Something went wrong', body, action }: { title?: string; body: string; action?: ReactNode }) => (

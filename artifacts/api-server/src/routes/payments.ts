@@ -5,7 +5,8 @@ import { ProviderNotConfiguredError } from "../payments/types";
 const router: IRouter = Router();
 
 router.get("/payments/providers", (_req, res) => {
-  res.json({ providers: providers.map((p) => ({ id: p.id, label: p.label, configured: p.isConfigured() })) });
+  // Only genuinely configured providers are reported; nothing else is customer-facing.
+  res.json({ providers: providers.filter((p) => p.isConfigured()).map((p) => ({ id: p.id, label: p.label })) });
 });
 
 router.post("/payments/checkout", async (req, res) => {
